@@ -120,6 +120,8 @@ Cancels an existing `Offer` and refunds the rent for the offer and holding accou
     - check program_id
 - [] associated_token_program
     - check program_id
+- [] system_program
+    - check program_id
 #### Procedure:
 - transfer remaining balance in holding account to refund_to
 - close holding account, refund rent to refund_rent_to
@@ -165,6 +167,8 @@ Permissionless instruction to match 2 `Offer`s.
     - check program_id
 - [] associated_token_program
     - check program_id
+- [] system_program
+    - check program_id
 #### Procedure:
 - check that the limit prices for both offers are met by a swap.
     - `offering_a.offering / offering_a.accept_at_least >= offering_b.accept_at_least / offering_b.offering`
@@ -194,17 +198,19 @@ Logs are human readable csv.
 
 ```
 TRADE:<TOKEN-A-BASE58>,<TOKEN-A-AMOUNT>,<TOKEN-B-BASE58>,<TOKEN-B-AMOUNT>
+OFFERS:<OFFERING-A-BASE58>,<OFFERING-A-NEW-OFFERING>,<OFFERING-A-NEW-ACCEPT-AT-LEAST>,<OFFERING-B-BASE58>,<OFFERING-B-NEW-OFFERING>,<OFFERING-B-NEW-ACCEPT-AT-LEAST>
 ```
 
 **Example:**
 
-100 USDC was just exchanged for 1 wSOL
+100 USDC was just exchanged for 1 wSOL between offering_a 4Rf9mGD7FeYknun5JczX5nGLTfQuS1GRjNVfkEMKE92b and offering_b 9oKrJ9iiEnCC7bewcRFbcdo4LKL2PhUEqcu8gH2eDbVM
 
 ```
 Program log: TRADE:So11111111111111111111111111111111111111112,1000000000,EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v,100000000
+Program log: OFFERS:4Rf9mGD7FeYknun5JczX5nGLTfQuS1GRjNVfkEMKE92b,0,0,9oKrJ9iiEnCC7bewcRFbcdo4LKL2PhUEqcu8gH2eDbVM,10000,100000
 ```
 
-This effectively gives the last done price of a market.  
+This effectively gives the last done price of a market and the updates to the orderbook state.
 
 ## QnA
 
@@ -213,11 +219,13 @@ This effectively gives the last done price of a market.
 Matchers can front run by placing their own order and claim the spread if they see that the highest bid is higher than the lowest ask.
 - have i reinvented the mempool dark forest?
 - 50% excess sharing maybe discourages this?
-- is this just a form of arbitrage?
+- is this just a form of acceptable arbitrage?
+
+Traders can front run other traders by offering a slightly higher `taker_fee_bps`.
 
 ### Revival attacks on closed offer accounts or holding accounts by griefing matchers
 
 Options:
-- ignore. Takes around 2000 SOL to completely block a pubkey from a market by revival attacking all possible offer and holding accounts for a token pair.
+- ignore. Takes around 2000 SOL to completely block a pubkey from a market by revival attacking all possible 65536 offer and holding accounts for a token pair.
 - check that only other match instructions can follow a match instruction in a transaction.
 - handle zeroed out accounts. Only works for offer accounts because spl token initializeAccount is permissionless.
