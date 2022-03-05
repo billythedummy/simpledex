@@ -1,0 +1,27 @@
+[package]
+name = "solana-simpledex"
+version = "0.1.0"
+license = "Apache-2.0"
+edition = "2018"
+
+[features]
+no-entrypoint = []
+test-bpf = []
+
+[dependencies]
+solana-program = "1.9.2" # This is the same version that spl-token and spl-ata uses. Has realloc, but we can't use it yet.
+spl-token = "3.3"
+spl-associated-token-account = "1.0.3"
+num-derive = "0.3"
+num-traits = "0.2"
+thiserror = "1.0"
+
+[dev-dependencies]
+solana-program-test = "1.9.2"
+solana-sdk = "1.9.2"
+
+[lib]
+crate-type = ["cdylib", "lib"]
+
+[package.metadata.docs.rs]
+targets = ["x86_64-unknown-linux-gnu"]
