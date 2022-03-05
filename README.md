@@ -120,8 +120,7 @@ Cancels an existing `Offer` and refunds the rent for the offer and holding accou
     - check program_id
 - [] associated_token_program
     - check program_id
-- [] system_program
-    - check program_id
+
 #### Procedure:
 - transfer remaining balance in holding account to refund_to
 - close holding account, refund rent to refund_rent_to
@@ -166,8 +165,6 @@ Permissionless instruction to match 2 `Offer`s.
 - [] token_program
     - check program_id
 - [] associated_token_program
-    - check program_id
-- [] system_program
     - check program_id
 #### Procedure:
 - check that the limit prices for both offers are met by a swap.
