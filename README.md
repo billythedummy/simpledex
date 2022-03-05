@@ -13,6 +13,7 @@ A simple dex design that makes full use of solana's massively parallel runtime
     - If both offers were made in the same slot, the matcher gets half of the taker's fees and half of the maker's fees
     - Technically a taker can avoid fees by just appending the `Match` instruction to his transaction and set himself as the matcher, and that's ok.
 - No settling of funds, tokens are credited directly to the order's specified token account
+- Global hardcoded constant fee parameter in terms of bps
 
 #### Benefits of this design:
 - Parallel processing of orders. Only the accounts of those involved in the order - maker, taker, and matcher, are write-locked.
@@ -33,12 +34,11 @@ An `Offer` account is located at PDA `[self.owner, self.offer_mint, self.accept_
 
 | field | type | description |
 | -- | -- | -- |
-| `bump` | `u8` | bump seed for this offer account |
-| `seed` | `u16` | seed for this offer account, unique for the given (owner, offer_mint, accept_mint) |
-| `taker_fee_bps` | `u16` | fee to pay matchers if this offer is a take order, in bps. Fee is paid in terms of `offer_mint` tokens.<br />`u16` means max fee offered is ~6.5x the trade size |
 | `slot` | `Slot` | slot at which this offer was made |
 | `offering` | `u64` | number of `offer_mint` tokens put up for offer in exchange for at least `accept_at_least` of `accept_mint` tokens, not including the taker fee. <br />Decreases as this offer is filled |
 | `accept_at_least` | `u64` | min number of `accept_mint` tokens accepted in exchange for `offering` amount of `offer_mint` tokens. <br />Decreases as this offer is filled |
+| `seed` | `u16` | seed for this offer account, unique for the given (owner, offer_mint, accept_mint) |
+| `bump` | `u8` | bump seed for this offer account |
 | `owner` | `Pubkey` | owner pubkey that created, and is authorized to cancel, this offer account |
 | `offer_mint` | `Pubkey` | mint of the token offered |
 | `accept_mint` | `Pubkey` | mint of the token accepted |
@@ -188,11 +188,45 @@ Permissionless instruction to match 2 `Offer`s.
 - update the 2 offer accounts by decrementing their `offering` by `amt_a` and `amt_b` respectively and `accept_at_least` fields by the amount that maintains the same price.
 - close the offer and holding accounts for filled offers (`offering` == 0 || `accept_at_least` == 0) and refund rent to their respective `refund_rent_to`.
 
-#### Logs
+## Logs
 
-To provide traders with real-time market info, each successful `Match` should emit a log that can be subscribed to.
+To provide traders with real-time market info, each successful instruction execution should emit a log that can be subscribed to in order to update a locally cached market/orderbook state.
 
-Logs are human readable csv.
+Logs are human readable csv, token amounts are in decimals.
+
+### CreateOffer
+
+#### Format:
+
+```
+NEW:<OFFER-PUBKEY-BASE58>,<OFFERING-TOKEN-BASE58>,<OFFER-AMOUNT>,<ACCEPT-TOKEN-BASE58>,<ACCEPT-AT-LEAST>
+```
+
+#### Example:
+
+Someone just created an offer exchanging 1 wSOL for at least 100 USDC at 4Rf9mGD7FeYknun5JczX5nGLTfQuS1GRjNVfkEMKE92b
+
+```
+Program log: NEW:4Rf9mGD7FeYknun5JczX5nGLTfQuS1GRjNVfkEMKE92b,So11111111111111111111111111111111111111112,1,EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v,100
+```
+
+### CancelOffer
+
+#### Format:
+
+```
+CANCEL:<OFFER-PUBKEY-BASE58>,<OFFERING-TOKEN-BASE58>,<OFFER-AMOUNT>,<ACCEPT-TOKEN-BASE58>,<ACCEPT-AT-LEAST>
+```
+
+#### Example:
+
+Someone just canceled an offer exchanging 1 wSOL for at least 100 USDC at 4Rf9mGD7FeYknun5JczX5nGLTfQuS1GRjNVfkEMKE92b
+
+```
+Program log: CANCEL:4Rf9mGD7FeYknun5JczX5nGLTfQuS1GRjNVfkEMKE92b,So11111111111111111111111111111111111111112,1,EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v,100
+```
+
+### Match
 
 **Format:**
 
@@ -206,11 +240,9 @@ OFFERS:<OFFERING-A-BASE58>,<OFFERING-A-NEW-OFFERING>,<OFFERING-A-NEW-ACCEPT-AT-L
 100 USDC was just exchanged for 1 wSOL between offering_a 4Rf9mGD7FeYknun5JczX5nGLTfQuS1GRjNVfkEMKE92b and offering_b 9oKrJ9iiEnCC7bewcRFbcdo4LKL2PhUEqcu8gH2eDbVM
 
 ```
-Program log: TRADE:So11111111111111111111111111111111111111112,1000000000,EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v,100000000
-Program log: OFFERS:4Rf9mGD7FeYknun5JczX5nGLTfQuS1GRjNVfkEMKE92b,0,0,9oKrJ9iiEnCC7bewcRFbcdo4LKL2PhUEqcu8gH2eDbVM,10000,100000
+Program log: TRADE:So11111111111111111111111111111111111111112,1,EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v,100
+Program log: OFFERS:4Rf9mGD7FeYknun5JczX5nGLTfQuS1GRjNVfkEMKE92b,0,0,9oKrJ9iiEnCC7bewcRFbcdo4LKL2PhUEqcu8gH2eDbVM,10,0.1
 ```
-
-This effectively gives the last done price of a market and the updates to the orderbook state.
 
 ## QnA
 
@@ -218,14 +250,19 @@ This effectively gives the last done price of a market and the updates to the or
 
 Matchers can front run by placing their own order and claim the spread if they see that the highest bid is higher than the lowest ask.
 - have i reinvented the mempool dark forest?
+    - At least you can't Just-in-time liquidity attack since to do it the attacker would need to see the order and to see the order would mean that the attacker will be the taker and not earn any fees.
 - 50% excess sharing maybe discourages this?
 - is this just a form of acceptable arbitrage?
 
-Traders can front run other traders by offering a slightly higher `taker_fee_bps`.
+~~Traders can front run other traders by offering a slightly higher `taker_fee_bps`.~~ removed fee market, fees are global constants.
+
+### Strict ordering - how do we ensure orders at the same/better price that are placed earlier get filled first?
+
+We don't. The fastest matchers (which can be the trader himself) win and determine the trade order. That kinda sucks if you can't continuously attempt to match your own open offers.
 
 ### Revival attacks on closed offer accounts or holding accounts by griefing matchers
 
 Options:
-- ignore. Takes around 2000 SOL to completely block a pubkey from a market by revival attacking all possible 65536 offer and holding accounts for a token pair.
+- ignore. Takes around 2000 SOL to completely block a pubkey from a market by revival attacking all possible 65536 offer and holding accounts for a token pair. Just have to wait for v1.9.0 to drop.
 - check that only other match instructions can follow a match instruction in a transaction.
 - handle zeroed out accounts. Only works for offer accounts because spl token initializeAccount is permissionless.
