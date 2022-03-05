@@ -1,5 +1,7 @@
 //! Error types
 
+use core::num::TryFromIntError;
+
 use solana_program::{
     decode_error::DecodeError,
     msg,
@@ -39,5 +41,11 @@ impl PrintProgramError for SimpleDexError {
         match self {
             Self::InternalError => msg!("unknown"),
         }
+    }
+}
+
+impl From<TryFromIntError> for SimpleDexError {
+    fn from(_e: TryFromIntError) -> Self {
+        Self::InternalError
     }
 }

@@ -173,10 +173,11 @@ Permissionless instruction to match 2 `Offer`s.
     - if `offering_a.offering >= offering_b.accept_at_least && offering_b.offering >= offering_a.accept_at_least`
         then `amt_a = offering_a.offering, amt_b = offering_b.offering` and both offers are closed.
     - else if `offering_a.offering >= offering_b.accept_at_least && offering_b.offering < offering_a.accept_at_least`,
-        then `amt_a = (offering_b.accept_at_least + max amt of token A offering_a is willing to pay for amt_b) / 2, amt_b = offering_b.offering` and only offering_b is closed.
+        then `amt_a = offering_b.accept_at_least, amt_b = offering_b.offering` and only offering_b is closed. 
     - else if `offering_a.offering < offering_b.accept_at_least && offering_b.offering >= offering_a.accept_at_least`,
-        then `amt_a = offering_a.offering, amt_b = (offering_a.accept_at_least + max amt of token B offering_b is willing to pay for amt_a) / 2` and only offering_a is closed.
+        then `amt_a = offering_a.offering, amt_b = offering_a.accept_at_least` and only offering_a is closed.
     - else price doesnt match 
+    - Note that in the case of only one order filling, the one who gets his order completely filled gets the worse deal
 - determine maker-taker relationship and matcher fees and bonuses.
     - token a excess = max amt of token A offering_a is willing to pay for `amt_b` - `amt_a`
     - token b excess = max amt of token B offering_b is willing to pay for `amt_a` - `amt_b`
@@ -256,6 +257,9 @@ Matchers can front run by placing their own order and claim the spread if they s
 ### Strict ordering - how do we ensure orders at the same/better price that are placed earlier get filled first?
 
 We don't. The fastest matchers (which can be the trader himself) win and determine the trade order. That kinda sucks if you can't continuously attempt to match your own open offers.
+
+Other options:
+- having fees scale with time passed. May introduce perverse incentive of matchers waiting for max amount of time before matching.
 
 ### Revival attacks on closed offer accounts or holding accounts by griefing matchers
 

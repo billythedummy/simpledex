@@ -1,7 +1,10 @@
 #![cfg_attr(not(test), forbid(unsafe_code))]
 
 pub mod error;
+pub mod fee;
 pub mod processor;
+pub mod state;
+pub mod types;
 
 #[cfg(not(feature = "no-entrypoint"))]
 mod entrypoint;
