@@ -3,28 +3,30 @@
 use solana_program::{
     account_info::AccountInfo,
     instruction::{AccountMeta, Instruction},
-    program::{invoke, invoke_signed},
+    program::invoke,
     program_error::ProgramError,
     pubkey::Pubkey,
 };
 use spl_associated_token_account::get_associated_token_address;
-use spl_token::instruction::transfer;
+use spl_token::{instruction::transfer, state::Account as TokenAccount};
 
-use crate::{error::SimpleDexError, fee::calc_fee};
+use crate::{
+    account::Account, checks::token_account_checked, error::SimpleDexError, fee::calc_fee,
+};
 
 use super::Offer;
 
-pub struct Holding;
+pub type HoldingAccount<'a, 'me> = Account<'a, 'me, TokenAccount>;
 
-impl Holding {
-    pub fn create_to<'a>(
-        new_holding_account: &AccountInfo<'a>,
+impl<'a, 'me> HoldingAccount<'a, 'me> {
+    pub fn create_to(
+        new_holding_account: &'me AccountInfo<'a>,
         payer: &AccountInfo<'a>,
         offer_acc: &AccountInfo<'a>,
         offer_mint: &AccountInfo<'a>,
         sys_prog: &AccountInfo<'a>,
         token_prog: &AccountInfo<'a>,
-    ) -> Result<(), ProgramError> {
+    ) -> Result<Self, ProgramError> {
         let ix = create_ata_instruction(payer.key, offer_acc.key, offer_mint.key);
         invoke(
             &ix,
@@ -36,13 +38,17 @@ impl Holding {
                 sys_prog.to_owned(),
                 token_prog.to_owned(),
             ],
-        )
+        )?;
+        Ok(Self {
+            account_info: new_holding_account,
+            data: token_account_checked(new_holding_account)?,
+        })
     }
 
-    pub fn receive_holding_tokens<'a>(
-        holding: &AccountInfo<'a>,
+    pub fn receive_holding_tokens(
+        self,
+        owner: &AccountInfo<'a>,
         pay_from: &AccountInfo<'a>,
-        offer_acc: &AccountInfo<'a>,
         offer: &Offer,
     ) -> Result<(), ProgramError> {
         let amt = offer
@@ -52,19 +58,18 @@ impl Holding {
         let ix = transfer(
             &spl_token::id(),
             pay_from.key,
-            holding.key,
-            offer_acc.key,
+            self.account_info.key,
+            owner.key,
             &[],
             amt,
         )?;
-        invoke_signed(
+        invoke(
             &ix,
             &[
                 pay_from.to_owned(),
-                holding.to_owned(),
-                offer_acc.to_owned(),
+                self.account_info.to_owned(),
+                owner.to_owned(),
             ],
-            &[offer_pda_seeds!(offer)],
         )
     }
 }

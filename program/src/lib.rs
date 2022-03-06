@@ -1,6 +1,7 @@
 #![cfg_attr(not(test), forbid(unsafe_code))]
 
 // needs to come first for macro defns
+mod account;
 mod checks;
 pub mod error;
 pub mod fee;

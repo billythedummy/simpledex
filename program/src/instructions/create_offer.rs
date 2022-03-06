@@ -17,7 +17,7 @@ use crate::{
     error::SimpleDexError,
     packun::SerializePacked,
     pda::try_find_offer_pda,
-    state::{Holding, Offer},
+    state::{HoldingAccount, OfferAccount},
 };
 
 use super::SimpleDexInstruction;
@@ -98,8 +98,9 @@ pub fn process_create_offer(
     is_system_program(sys_prog)?;
 
     // Process
-    Holding::create_to(holding, payer, offer, offer_mint, sys_prog, token_prog)?;
-    let created_offer = Offer::create_to(
+    let created_holding =
+        HoldingAccount::create_to(holding, payer, offer, offer_mint, sys_prog, token_prog)?;
+    let created_offer = OfferAccount::create_to(
         offer,
         payer,
         sys_prog,
@@ -114,7 +115,7 @@ pub fn process_create_offer(
         credit_to.key,
         refund_rent_to.key,
     )?;
-    Holding::receive_holding_tokens(holding, pay_from, offer, &created_offer)
+    created_holding.receive_holding_tokens(owner, pay_from, &created_offer.data)
 }
 
 #[allow(clippy::too_many_arguments)]

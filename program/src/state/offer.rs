@@ -17,6 +17,7 @@ use solana_program::{
 };
 
 use crate::{
+    account::Account,
     error::SimpleDexError,
     packun::{DeserializePacked, SerializePacked},
     types::{OfferSeq, Ratio},
@@ -39,48 +40,6 @@ pub struct Offer {
 }
 
 impl Offer {
-    /// Create and save offer account to storage
-    #[allow(clippy::too_many_arguments)]
-    pub fn create_to<'a>(
-        new_offer_account: &AccountInfo<'a>,
-        payer: &AccountInfo<'a>,
-        system_program: &AccountInfo<'a>,
-        offering: u64,
-        accept_at_least: u64,
-        seed: u16,
-        bump: u8,
-        owner: &Pubkey,
-        offer_mint: &Pubkey,
-        accept_mint: &Pubkey,
-        refund_to: &Pubkey,
-        credit_to: &Pubkey,
-        refund_rent_to: &Pubkey,
-    ) -> Result<Self, ProgramError> {
-        let clock = Clock::get()?;
-        let res = Self {
-            slot: clock.slot,
-            offering,
-            accept_at_least,
-            seed,
-            bump,
-            owner: owner.to_owned(),
-            offer_mint: offer_mint.to_owned(),
-            accept_mint: accept_mint.to_owned(),
-            refund_to: refund_to.to_owned(),
-            credit_to: credit_to.to_owned(),
-            refund_rent_to: refund_rent_to.to_owned(),
-        };
-        create_pda_account(
-            Self::LEN,
-            payer,
-            system_program,
-            new_offer_account,
-            offer_pda_seeds!(res),
-        )?;
-        Self::pack(res, &mut new_offer_account.data.borrow_mut())?;
-        Ok(res)
-    }
-
     pub fn try_match(a: &Self, b: &Self) -> Result<(u64, u64), SimpleDexError> {
         if !Self::is_match(a, b) {
             return Err(SimpleDexError::InternalError);
@@ -123,6 +82,55 @@ impl Offer {
         }
         let proportion = Ratio::new(to_accept, self.accept_at_least)?;
         proportion.apply_floor(self.offering)
+    }
+}
+
+pub type OfferAccount<'a, 'me> = Account<'a, 'me, Offer>;
+
+impl<'a, 'me> OfferAccount<'a, 'me> {
+    /// Create and save offer account to storage
+    #[allow(clippy::too_many_arguments)]
+    pub fn create_to(
+        new_offer_account: &'me AccountInfo<'a>,
+        payer: &AccountInfo<'a>,
+        system_program: &AccountInfo<'a>,
+        offering: u64,
+        accept_at_least: u64,
+        seed: u16,
+        bump: u8,
+        owner: &Pubkey,
+        offer_mint: &Pubkey,
+        accept_mint: &Pubkey,
+        refund_to: &Pubkey,
+        credit_to: &Pubkey,
+        refund_rent_to: &Pubkey,
+    ) -> Result<Self, ProgramError> {
+        let clock = Clock::get()?;
+        let res = Offer {
+            slot: clock.slot,
+            offering,
+            accept_at_least,
+            seed,
+            bump,
+            owner: owner.to_owned(),
+            offer_mint: offer_mint.to_owned(),
+            accept_mint: accept_mint.to_owned(),
+            refund_to: refund_to.to_owned(),
+            credit_to: credit_to.to_owned(),
+            refund_rent_to: refund_rent_to.to_owned(),
+        };
+        create_pda_account(
+            Offer::LEN,
+            payer,
+            system_program,
+            new_offer_account,
+            offer_pda_seeds!(res),
+        )?;
+        Offer::pack(res, &mut new_offer_account.data.borrow_mut())?;
+        Ok(Self {
+            account_info: new_offer_account,
+            data: res,
+        })
     }
 }
 
