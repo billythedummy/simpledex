@@ -1,10 +1,10 @@
 use crate::{error::SimpleDexError, types::Ratio};
 
-pub const FEE_BPS: u64 = 10;
+pub const TAKER_FEE_BPS: u64 = 10;
 
 const BPS_BASE: u64 = 10_000;
 
-const FEE_RATIO: Ratio = Ratio::new_unchecked(FEE_BPS, BPS_BASE);
+const FEE_RATIO: Ratio = Ratio::new_unchecked(TAKER_FEE_BPS, BPS_BASE);
 
 pub fn calc_fee(amt_transferred: u64) -> Result<u64, SimpleDexError> {
     FEE_RATIO.apply_floor(amt_transferred)

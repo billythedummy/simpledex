@@ -13,8 +13,8 @@ concat-string = "1.0.1"
 num-derive = "0.3"
 num-traits = "0.2"
 solana-program = "1.9.2" # This is the same version that spl-token and spl-ata uses. Has realloc, but we can't use it yet.
-spl-token = "3.3"
-spl-associated-token-account = "1.0.3"
+spl-token = { version = "3.3", features = ["no-entrypoint"] }
+spl-associated-token-account = { version = "1.0.3", features = ["no-entrypoint"] }
 spl-math = { version = "0.1.0", features = ["no-entrypoint"] }
 thiserror = "1.0"
 

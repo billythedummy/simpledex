@@ -66,7 +66,6 @@ Creates a new `Offer`.
 #### Args:
 - `bump`: `u8`
 - `seed`: `u16`
-- `taker_fee_bps`: `u16`
 - `offering`: `u64`
 - `accept_at_least`: `u64`
 
@@ -81,6 +80,7 @@ Creates a new `Offer`.
 - [] refund_to
     - check valid offer_mint token account
     - check not frozen
+    - check not equal to `holding`
 - [] credit_to
     - check valid accept_mint token account
     - check not frozen

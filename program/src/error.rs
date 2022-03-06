@@ -15,6 +15,12 @@ use thiserror::Error;
 pub enum SimpleDexError {
     // 0
     InternalError,
+    PackunError,
+    InvalidHoldingAccount,
+    IncorrectMint,
+    TokenAccountFrozen,
+    // 5
+    RefundingToOfferAccounts,
 }
 
 impl From<SimpleDexError> for ProgramError {
@@ -40,6 +46,13 @@ impl PrintProgramError for SimpleDexError {
     {
         match self {
             Self::InternalError => msg!("unknown"),
+            Self::PackunError => msg!("(de)serialization error"),
+            Self::InvalidHoldingAccount => msg!("provided account is not a valid holding account"),
+            Self::IncorrectMint => msg!("given mint does not match token account's"),
+            Self::TokenAccountFrozen => msg!("provided token account is frozen"),
+            Self::RefundingToOfferAccounts => {
+                msg!("attempting to refund tokens/lamports to offer accounts")
+            }
         }
     }
 }
