@@ -154,12 +154,12 @@ pub fn create_offer(
 
     let mut data = [0; SimpleDexInstruction::PACKED_LEN_CREATE_OFFER];
     let mut writer = Cursor::new(data.as_mut());
-    CreateOfferArgs {
+    SimpleDexInstruction::CreateOffer(CreateOfferArgs {
         bump,
         seed,
         offering,
         accept_at_least,
-    }
+    })
     .write_bytes(&mut writer)?;
 
     Ok(Instruction {
