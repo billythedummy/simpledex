@@ -1,10 +1,11 @@
 #![cfg_attr(not(test), forbid(unsafe_code))]
 
-// needs to come first for macro defns
+// These 2 mods need to come first for macro defns
 pub mod pda;
 
-pub mod account;
 pub mod checks;
+
+pub mod account;
 pub mod error;
 pub mod fee;
 pub mod instructions;
