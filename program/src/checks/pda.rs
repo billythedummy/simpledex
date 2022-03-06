@@ -17,13 +17,8 @@ pub fn is_offer_pda(
         let offer_mint = offer_mint.key;
         let accept_mint = accept_mint.key;
         Pubkey::try_find_program_address(
-            &[
-                owner.as_ref(),
-                offer_mint.as_ref(),
-                accept_mint.as_ref(),
-                &seed.to_le_bytes(),
-            ],
-            &crate::ID,
+            offer_pda_seeds!(owner, offer_mint, accept_mint, seed),
+            &crate::id(),
         )
         .ok_or(SimpleDexError::InternalError)
     }?;

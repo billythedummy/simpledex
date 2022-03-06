@@ -7,7 +7,9 @@ use solana_program::{
 
 use crate::{
     id,
-    instructions::{create_offer::process_create_offer, SimpleDexInstruction},
+    instructions::{
+        cancel_offer::process_cancel, create_offer::process_create_offer, SimpleDexInstruction,
+    },
     packun::DeserializePacked,
 };
 
@@ -21,9 +23,8 @@ impl Processor {
         let mut reader = input;
         let instruction = SimpleDexInstruction::read_bytes(&mut reader)?;
         match instruction {
-            SimpleDexInstruction::CreateOffer(args) => {
-                process_create_offer(program_id, accounts, args)
-            }
+            SimpleDexInstruction::CreateOffer(args) => process_create_offer(accounts, args),
+            SimpleDexInstruction::CancelOffer => process_cancel(accounts),
             _ => Ok(()),
         }
     }

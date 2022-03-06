@@ -9,7 +9,8 @@ use solana_program::{
     entrypoint::ProgramResult,
     program::{invoke, invoke_signed},
     program_error::ProgramError,
-    program_pack::{Pack, Sealed},
+    program_memory::sol_memset,
+    program_pack::{IsInitialized, Pack, Sealed},
     pubkey::Pubkey,
     rent::Rent,
     system_instruction,
@@ -20,6 +21,7 @@ use crate::{
     account::Account,
     error::SimpleDexError,
     packun::{DeserializePacked, SerializePacked},
+    pda::try_create_offer_pda,
     types::{OfferSeq, Ratio},
 };
 
@@ -132,6 +134,31 @@ impl<'a, 'me> OfferAccount<'a, 'me> {
             data: res,
         })
     }
+
+    pub fn load_checked(offer_account: &'me AccountInfo<'a>) -> Result<Self, ProgramError> {
+        let data = Offer::unpack(*offer_account.data.borrow())?;
+        let expected_pda = try_create_offer_pda(&data)?;
+        if &expected_pda != offer_account.key {
+            return Err(SimpleDexError::IncorrectOfferAccount.into());
+        }
+        Ok(Self {
+            account_info: offer_account,
+            data,
+        })
+    }
+
+    pub fn close(self, refund_rent_to: &AccountInfo<'a>) -> Result<(), SimpleDexError> {
+        let refund_rent_to_starting_lamports = refund_rent_to.lamports();
+        **refund_rent_to.lamports.borrow_mut() = refund_rent_to_starting_lamports
+            .checked_add(self.account_info.lamports())
+            .ok_or(SimpleDexError::InternalError)?;
+
+        **self.account_info.lamports.borrow_mut() = 0;
+        let mut data = self.account_info.data.borrow_mut();
+        let data_len = data.len();
+        sol_memset(*data, 0, data_len);
+        Ok(())
+    }
 }
 
 fn create_pda_account<'a>(
@@ -141,7 +168,7 @@ fn create_pda_account<'a>(
     new_pda_account: &AccountInfo<'a>,
     new_pda_signer_seeds: &[&[u8]],
 ) -> ProgramResult {
-    let owner = &crate::ID;
+    let owner = &crate::id();
     let rent = Rent::get()?;
     if new_pda_account.lamports() > 0 {
         let required_lamports = rent
@@ -187,6 +214,12 @@ fn create_pda_account<'a>(
             ],
             &[new_pda_signer_seeds],
         )
+    }
+}
+
+impl IsInitialized for Offer {
+    fn is_initialized(&self) -> bool {
+        self.slot != 0
     }
 }
 

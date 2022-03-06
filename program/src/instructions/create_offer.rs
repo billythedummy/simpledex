@@ -33,7 +33,6 @@ pub struct CreateOfferArgs {
 }
 
 pub fn process_create_offer(
-    _program_id: &Pubkey,
     accounts: &[AccountInfo],
     args: CreateOfferArgs,
 ) -> Result<(), ProgramError> {

@@ -109,16 +109,15 @@ Cancels an existing `Offer` and refunds the rent for the offer and holding accou
 #### Accounts:
 - [s] owner
 - [w] offer
+    - check owner
     - check PDA matches using create_program_address()
 - [w] holding
     - check this is offer's ATA for offer_mint
 - [w] refund_to
+    - check this is offer's refund_to
 - [w] refund_rent_to
-- [] offer_mint
-    - check matches offer's
+    - check this is offer's refund_rent_to
 - [] token_program
-    - check program_id
-- [] associated_token_program
     - check program_id
 
 #### Procedure:

@@ -6,7 +6,7 @@ use spl_token::state::Account;
 use crate::error::SimpleDexError;
 
 pub fn token_account_checked(actual: &AccountInfo) -> Result<Account, ProgramError> {
-    if actual.owner != &spl_token::ID {
+    if actual.owner != &spl_token::id() {
         return Err(ProgramError::IllegalOwner);
     }
     // spl token IsInitialized trait checks token acc is initialized
