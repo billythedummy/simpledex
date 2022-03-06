@@ -98,7 +98,7 @@ pub fn process_create_offer(
     is_system_program(sys_prog)?;
 
     // Process
-    Holding::create_to(payer, holding, offer, offer_mint, sys_prog, token_prog)?;
+    Holding::create_to(holding, payer, offer, offer_mint, sys_prog, token_prog)?;
     let created_offer = Offer::create_to(
         offer,
         payer,
@@ -114,7 +114,7 @@ pub fn process_create_offer(
         credit_to.key,
         refund_rent_to.key,
     )?;
-    Holding::transfer_holding_tokens(args.offering, pay_from, holding, offer, &created_offer)
+    Holding::receive_holding_tokens(holding, pay_from, offer, &created_offer)
 }
 
 #[allow(clippy::too_many_arguments)]

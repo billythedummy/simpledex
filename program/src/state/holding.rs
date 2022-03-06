@@ -18,8 +18,8 @@ pub struct Holding;
 
 impl Holding {
     pub fn create_to<'a>(
-        payer: &AccountInfo<'a>,
         new_holding_account: &AccountInfo<'a>,
+        payer: &AccountInfo<'a>,
         offer_acc: &AccountInfo<'a>,
         offer_mint: &AccountInfo<'a>,
         sys_prog: &AccountInfo<'a>,
@@ -39,15 +39,15 @@ impl Holding {
         )
     }
 
-    pub fn transfer_holding_tokens<'a>(
-        offering: u64,
-        pay_from: &AccountInfo<'a>,
+    pub fn receive_holding_tokens<'a>(
         holding: &AccountInfo<'a>,
+        pay_from: &AccountInfo<'a>,
         offer_acc: &AccountInfo<'a>,
         offer: &Offer,
     ) -> Result<(), ProgramError> {
-        let amt = offering
-            .checked_add(calc_fee(offering)?)
+        let amt = offer
+            .offering
+            .checked_add(calc_fee(offer.offering)?)
             .ok_or(SimpleDexError::InternalError)?;
         let ix = transfer(
             &spl_token::id(),
