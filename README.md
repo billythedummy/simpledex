@@ -5,7 +5,7 @@ A simple dex design that makes full use of solana's massively parallel runtime
 ## Architecture
 
 - There is no market
-- Just traders creating offers of one token type for another at a specified rate
+- Just traders creating offers of one token type for another at a specified limit rate
 - Off-chain matchers are incentivized to match offers by the fees offered by the traders
     - To incentivize matchers to give traders the best rate, 50% of excess tokens from an offer matched at a rate better than the limit price is given to the matcher as a bonus.
 - Maker-taker relationship is determined by slot at which the offer was made. The taker is simply the offer with the later slot
@@ -23,6 +23,7 @@ A simple dex design that makes full use of solana's massively parallel runtime
 #### Disadvantanges:
 - Complexity moved off-chain means more work off-chain. For example, to visualize an orderbook, you would need to `getProgramAccounts()` and filter by mints, and then aggregate those together.
 - Live updates are a little more complicated. Instead of simply opening a websocket to listen for changes to a central orderbook account, you need to listen to program logs and update a locally cached state accordingly.
+- Intense order-matching competition can lead to flooding of chain with failed match transactions(?)
 
 ## Accounts
 
