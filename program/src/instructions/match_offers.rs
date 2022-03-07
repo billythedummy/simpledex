@@ -193,3 +193,43 @@ pub fn match_offers(
         data: data.to_vec(),
     })
 }
+
+#[cfg(test)]
+mod tests {
+    use proptest::prelude::*;
+
+    use super::*;
+
+    prop_compose! {
+        fn valid_matches()
+            (a_offering in 0..=u64::MAX, b_offering in 0..=u64::MAX)
+            (
+                a_offering in Just(a_offering), b_offering in Just(b_offering), a_accept_at_least in 0..=b_offering, b_accept_at_least in 0..=a_offering,)
+            -> (u64, u64, u64, u64) {
+                (a_offering, a_accept_at_least, b_offering, b_accept_at_least)
+            }
+    }
+
+    proptest! {
+        #[test]
+        fn test_receipt_can_be_calculated_for_valid_matches(
+            a_slot in 1..=u64::MAX,
+            b_slot in 1..=u64::MAX,
+            (a_offering, a_accept_at_least, b_offering, b_accept_at_least) in valid_matches()
+        ) {
+            let mut offering_a = Offer::default();
+            offering_a.slot = a_slot;
+            offering_a.offering = a_offering;
+            offering_a.accept_at_least = a_accept_at_least;
+            let mut offering_b = Offer::default();
+            offering_b.slot = b_slot;
+            offering_b.offering = b_offering;
+            offering_b.accept_at_least = b_accept_at_least;
+
+            let (amt_a_gives, amt_b_gives) = Offer::try_match(&offering_a, &offering_b)?;
+            let receipt = Receipt::calc(amt_a_gives, amt_b_gives, &offering_a, &offering_b)?;
+            prop_assert!(receipt.a_to_b <= amt_a_gives);
+            prop_assert!(receipt.b_to_a <= amt_b_gives);
+        }
+    }
+}
