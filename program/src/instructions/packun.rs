@@ -15,7 +15,7 @@ impl<R: Read> DeserializePacked<R, SimpleDexError> for SimpleDexInstruction {
         match tag {
             0 => Ok(Self::CreateOffer(CreateOfferArgs::read_bytes(buf)?)),
             1 => Ok(Self::CancelOffer),
-            2 => Ok(Self::Match),
+            2 => Ok(Self::MatchOffers),
             _ => Err(SimpleDexError::PackunError),
         }
     }
@@ -44,7 +44,7 @@ impl<W: Write> SerializePacked<W, SimpleDexError> for SimpleDexInstruction {
                 args.write_bytes(buf)
             }
             Self::CancelOffer => 1u8.write_bytes(buf),
-            Self::Match => 2u8.write_bytes(buf),
+            Self::MatchOffers => 2u8.write_bytes(buf),
         }
     }
 }

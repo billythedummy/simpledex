@@ -8,7 +8,8 @@ use solana_program::{
 use crate::{
     id,
     instructions::{
-        cancel_offer::process_cancel, create_offer::process_create_offer, SimpleDexInstruction,
+        cancel_offer::process_cancel, create_offer::process_create_offer,
+        match_offers::process_match_offers, SimpleDexInstruction,
     },
     packun::DeserializePacked,
 };
@@ -25,7 +26,7 @@ impl Processor {
         match instruction {
             SimpleDexInstruction::CreateOffer(args) => process_create_offer(accounts, args),
             SimpleDexInstruction::CancelOffer => process_cancel(accounts),
-            _ => Ok(()),
+            SimpleDexInstruction::MatchOffers => process_match_offers(accounts),
         }
     }
 }

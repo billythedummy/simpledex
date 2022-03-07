@@ -16,8 +16,6 @@ use crate::{
 
 use super::SimpleDexInstruction;
 
-const CANCEL_OFFER_ACCOUNTS_LEN: usize = 6;
-
 pub fn process_cancel(accounts: &[AccountInfo]) -> Result<(), ProgramError> {
     let account_info_iter = &mut accounts.iter();
 
@@ -34,9 +32,9 @@ pub fn process_cancel(accounts: &[AccountInfo]) -> Result<(), ProgramError> {
 
     // Checks
     is_signer(owner)?;
-    is_owner(owner, &offer_acc.data)?;
-    is_refund_to(refund_to, &offer_acc.data)?;
-    is_refund_rent_to(refund_rent_to, &offer_acc.data)?;
+    is_owner(owner.key, &offer_acc.data)?;
+    is_refund_to(refund_to.key, &offer_acc.data)?;
+    is_refund_rent_to(refund_rent_to.key, &offer_acc.data)?;
     is_token_program(token_prog)?;
 
     // Process
@@ -49,13 +47,14 @@ pub fn cancel_offer(offer: &Offer) -> Result<Instruction, ProgramError> {
     let offer_pubkey = try_create_offer_pda(offer)?;
     let holding = get_associated_token_address(&offer_pubkey, &offer.offer_mint);
 
-    let mut accounts = Vec::with_capacity(CANCEL_OFFER_ACCOUNTS_LEN);
-    accounts.push(AccountMeta::new_readonly(offer.owner, true));
-    accounts.push(AccountMeta::new(offer_pubkey, false));
-    accounts.push(AccountMeta::new(holding, false));
-    accounts.push(AccountMeta::new(offer.refund_to, false));
-    accounts.push(AccountMeta::new(offer.refund_rent_to, false));
-    accounts.push(AccountMeta::new_readonly(spl_token::id(), false));
+    let accounts = vec![
+        AccountMeta::new_readonly(offer.owner, true),
+        AccountMeta::new(offer_pubkey, false),
+        AccountMeta::new(holding, false),
+        AccountMeta::new(offer.refund_to, false),
+        AccountMeta::new(offer.refund_rent_to, false),
+        AccountMeta::new_readonly(spl_token::id(), false),
+    ];
 
     let mut data = [0; SimpleDexInstruction::PACKED_LEN_CANCEL_OFFER];
     let mut writer = Cursor::new(data.as_mut());

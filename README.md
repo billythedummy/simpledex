@@ -125,7 +125,7 @@ Cancels an existing `Offer` and refunds the rent for the offer and holding accou
 - close holding account, refund rent to refund_rent_to
 - close offer account, refund rent to refund_rent_to
 
-### Match
+### MatchOffers
 
 Permissionless instruction to match 2 `Offer`s.
 
@@ -159,11 +159,7 @@ Permissionless instruction to match 2 `Offer`s.
     - check matches `offering_b.refund_rent_to`
 - [w] matcher_a. the matcher's token A account to credit fees to.
 - [w] matcher_b. the matcher's token B account to credit fees to.
-- [] mint_a
-- [] mint_b
 - [] token_program
-    - check program_id
-- [] associated_token_program
     - check program_id
 #### Procedure:
 - check that the limit prices for both offers are met by a swap.
@@ -178,8 +174,8 @@ Permissionless instruction to match 2 `Offer`s.
     - else price doesnt match 
     - Note that in the case of only one order filling, the one who gets his order completely filled gets the worse deal
 - determine maker-taker relationship and matcher fees and bonuses.
-    - token a excess = max amt of token A offering_a is willing to pay for `amt_b` - `amt_a`
-    - token b excess = max amt of token B offering_b is willing to pay for `amt_a` - `amt_b`
+    - token a excess = `amt_a` - min amt of token A offering_b is willing to receive in exchange for giving `amt_b`
+    - token b excess = `amt_b` - min amt of token B offering_a is willing to receive in exchange for fiving `amt_a`
 - perform the swap: transfer `amt_a` from `holding_a` to `credit_to_b` and `amt_b` from `holding_b` to `credit_to_a`
 - pay the matcher fees and bonuses: transfer tokens from `holding_a` to `matcher_a` or from `holding_b` to `matcher_b`, or both
 - update the 2 offer accounts by decrementing their `offering` by `amt_a` and `amt_b` respectively and `accept_at_least` fields by the amount that maintains the same price.

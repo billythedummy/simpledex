@@ -99,7 +99,7 @@ impl<'a, 'me> HoldingAccount<'a, 'me> {
 
     pub fn transfer(
         &self,
-        offer: &Account<'a, 'me, Offer>,
+        offer: &OfferAccount<'a, 'me>,
         to: &AccountInfo<'a>,
         amt: u64,
     ) -> Result<(), ProgramError> {
@@ -124,7 +124,7 @@ impl<'a, 'me> HoldingAccount<'a, 'me> {
 
     pub fn close(
         self,
-        offer: &Account<'a, 'me, Offer>,
+        offer: &OfferAccount<'a, 'me>,
         refund_to: &AccountInfo<'a>,
         refund_rent_to: &AccountInfo<'a>,
     ) -> Result<(), ProgramError> {
@@ -148,6 +148,11 @@ impl<'a, 'me> HoldingAccount<'a, 'me> {
             ],
             &[offer_pda_seeds!(offer.data)],
         )
+    }
+
+    pub fn reload(mut self) -> Result<Self, ProgramError> {
+        self.data = token_account_checked(self.account_info)?;
+        Ok(self)
     }
 }
 

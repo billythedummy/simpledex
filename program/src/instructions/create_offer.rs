@@ -22,8 +22,6 @@ use crate::{
 
 use super::SimpleDexInstruction;
 
-const CREATE_OFFER_ACCOUNTS_LEN: usize = 13;
-
 #[derive(Clone, Copy, Debug, PartialEq)]
 pub struct CreateOfferArgs {
     pub bump: u8,
@@ -114,7 +112,8 @@ pub fn process_create_offer(
         credit_to.key,
         refund_rent_to.key,
     )?;
-    created_holding.receive_holding_tokens(owner, pay_from, &created_offer.data)
+    created_holding.receive_holding_tokens(owner, pay_from, &created_offer.data)?;
+    Ok(())
 }
 
 #[allow(clippy::too_many_arguments)]
@@ -134,23 +133,21 @@ pub fn create_offer(
     let (offer, bump) = try_find_offer_pda(owner, offer_mint, accept_mint, seed)?;
     let holding = get_associated_token_address(&offer, offer_mint);
 
-    let mut accounts = Vec::with_capacity(CREATE_OFFER_ACCOUNTS_LEN);
-    accounts.push(AccountMeta::new(*payer, true));
-    accounts.push(AccountMeta::new_readonly(*owner, true));
-    accounts.push(AccountMeta::new(*pay_from, false));
-    accounts.push(AccountMeta::new(offer, false));
-    accounts.push(AccountMeta::new(holding, false));
-    accounts.push(AccountMeta::new_readonly(*refund_to, false));
-    accounts.push(AccountMeta::new_readonly(*credit_to, false));
-    accounts.push(AccountMeta::new_readonly(*refund_rent_to, false));
-    accounts.push(AccountMeta::new_readonly(*offer_mint, false));
-    accounts.push(AccountMeta::new_readonly(*accept_mint, false));
-    accounts.push(AccountMeta::new_readonly(spl_token::id(), false));
-    accounts.push(AccountMeta::new_readonly(
-        spl_associated_token_account::id(),
-        false,
-    ));
-    accounts.push(AccountMeta::new_readonly(system_program::id(), false));
+    let accounts = vec![
+        AccountMeta::new(*payer, true),
+        AccountMeta::new_readonly(*owner, true),
+        AccountMeta::new(*pay_from, false),
+        AccountMeta::new(offer, false),
+        AccountMeta::new(holding, false),
+        AccountMeta::new_readonly(*refund_to, false),
+        AccountMeta::new_readonly(*credit_to, false),
+        AccountMeta::new_readonly(*refund_rent_to, false),
+        AccountMeta::new_readonly(*offer_mint, false),
+        AccountMeta::new_readonly(*accept_mint, false),
+        AccountMeta::new_readonly(spl_token::id(), false),
+        AccountMeta::new_readonly(spl_associated_token_account::id(), false),
+        AccountMeta::new_readonly(system_program::id(), false),
+    ];
 
     let mut data = [0; SimpleDexInstruction::PACKED_LEN_CREATE_OFFER];
     let mut writer = Cursor::new(data.as_mut());

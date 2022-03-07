@@ -44,7 +44,7 @@ pub struct Offer {
 impl Offer {
     pub fn try_match(a: &Self, b: &Self) -> Result<(u64, u64), SimpleDexError> {
         if !Self::is_match(a, b) {
-            return Err(SimpleDexError::InternalError);
+            return Err(SimpleDexError::OffersDontMatch);
         }
         let a_can_fill_b = a.offering >= b.accept_at_least;
         let b_can_fill_a = b.offering >= a.accept_at_least;
@@ -52,7 +52,7 @@ impl Offer {
             (true, true) => (a.offering, b.offering),
             (true, false) => (b.accept_at_least, b.offering),
             (false, true) => (a.offering, a.accept_at_least),
-            (false, false) => return Err(SimpleDexError::InternalError),
+            (false, false) => return Err(SimpleDexError::OffersDontMatch),
         };
         Ok((amt_a_gives, amt_b_gives))
     }
@@ -78,12 +78,26 @@ impl Offer {
         }
     }
 
-    pub fn max_willing_to_pay_for(&self, to_accept: u64) -> Result<u64, SimpleDexError> {
-        if to_accept >= self.accept_at_least {
-            return Ok(self.offering);
+    pub fn min_willing_to_receive_for(&self, to_pay: u64) -> Result<u64, SimpleDexError> {
+        // shouldnt be greater than
+        if to_pay >= self.offering {
+            return Ok(self.accept_at_least);
         }
-        let proportion = Ratio::new(to_accept, self.accept_at_least)?;
-        proportion.apply_floor(self.offering)
+        let proportion = Ratio::new(to_pay, self.offering)?;
+        proportion.apply_ceil(self.accept_at_least)
+    }
+
+    pub fn update_offer_matched(mut self, amount_given: u64) -> Result<Self, SimpleDexError> {
+        let accept_over_offer = Ratio::new(self.accept_at_least, self.offering)?;
+        let new_offering = self
+            .offering
+            .checked_sub(amount_given)
+            .ok_or(SimpleDexError::InternalError)?;
+        // round towards higher price
+        let new_accept_at_least = accept_over_offer.apply_ceil(new_offering)?;
+        self.offering = new_offering;
+        self.accept_at_least = new_accept_at_least;
+        Ok(self)
     }
 }
 
@@ -158,6 +172,10 @@ impl<'a, 'me> OfferAccount<'a, 'me> {
         let data_len = data.len();
         sol_memset(*data, 0, data_len);
         Ok(())
+    }
+
+    pub fn save(self) -> Result<(), ProgramError> {
+        Offer::pack(self.data, &mut self.account_info.data.borrow_mut())
     }
 }
 

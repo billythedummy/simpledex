@@ -25,6 +25,9 @@ pub enum SimpleDexError {
     IncorrectOwner,
     IncorrectRefundTo,
     IncorredRefundRentTo,
+    // 10
+    IncorrectCreditTo,
+    OffersDontMatch,
 }
 
 impl From<SimpleDexError> for ProgramError {
@@ -61,6 +64,8 @@ impl PrintProgramError for SimpleDexError {
             Self::IncorrectOwner => msg!("not owner of this offer"),
             Self::IncorrectRefundTo => msg!("incorrect refund_to for this offer"),
             Self::IncorredRefundRentTo => msg!("incorrect refund_rent_to for this offer"),
+            Self::IncorrectCreditTo => msg!("incorrect credit_to for this offer"),
+            Self::OffersDontMatch => msg!("offers do not meet each other's limit price"),
         }
     }
 }
