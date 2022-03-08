@@ -3,6 +3,7 @@ use std::io::Cursor;
 use solana_program::{
     account_info::{next_account_info, AccountInfo},
     instruction::{AccountMeta, Instruction},
+    msg,
     program_error::ProgramError,
     pubkey::Pubkey,
     system_program,
@@ -113,7 +114,38 @@ pub fn process_create_offer(
         refund_rent_to.key,
     )?;
     created_holding.receive_holding_tokens(owner, pay_from, &created_offer.data)?;
+    log_success(
+        offer.key,
+        offer_mint.key,
+        args.offering,
+        accept_mint.key,
+        args.accept_at_least,
+    );
     Ok(())
+}
+
+fn log_success(
+    created_offer: &Pubkey,
+    offer_mint: &Pubkey,
+    offering: u64,
+    accept_mint: &Pubkey,
+    accept_at_least: u64,
+) {
+    // Comparison:
+    // concat_string! prog size 212120 bytes
+    // format str prog size 209208 bytes
+    // TODO: check number of compute units used
+    // use concat_string::concat_string;
+    // let m = concat_string!("NEW:", created_offer.to_string(), ",", offer_mint.to_string(), ",", offering.to_string(), ",", accept_mint.to_string(), ",", accept_at_least.to_string());
+    // msg!(&m);
+    msg!(
+        "NEW:{},{},{},{},{}",
+        created_offer.to_string(),
+        offer_mint.to_string(),
+        offering,
+        accept_mint.to_string(),
+        accept_at_least
+    );
 }
 
 #[allow(clippy::too_many_arguments)]
