@@ -230,6 +230,8 @@ mod tests {
             let receipt = Receipt::calc(amt_a_gives, amt_b_gives, &offering_a, &offering_b)?;
             prop_assert!(receipt.a_to_b <= amt_a_gives);
             prop_assert!(receipt.b_to_a <= amt_b_gives);
+            prop_assert!(receipt.a_to_b >= offering_b.min_willing_to_receive_for(amt_b_gives)?);
+            prop_assert!(receipt.b_to_a >= offering_a.min_willing_to_receive_for(amt_a_gives)?);
         }
     }
 }

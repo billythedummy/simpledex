@@ -5,6 +5,10 @@ pub mod create_offer;
 pub mod match_offers;
 mod packun;
 
+pub use cancel_offer::cancel_offer;
+pub use create_offer::create_offer;
+pub use match_offers::match_offers;
+
 #[repr(C)]
 #[derive(Clone, Debug, PartialEq)]
 pub enum SimpleDexInstruction {
