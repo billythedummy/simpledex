@@ -1,5 +1,7 @@
 use crate::{error::SimpleDexError, types::Ratio};
 
+pub const MATCHER_EXCESS_BONUS_DIVISOR: u64 = 2;
+
 pub const TAKER_FEE_BPS: u64 = 10;
 
 const BPS_BASE: u64 = 10_000;

@@ -9,7 +9,6 @@ use solana_program::{
     entrypoint::ProgramResult,
     program::{invoke, invoke_signed},
     program_error::ProgramError,
-    program_memory::sol_memset,
     program_pack::{IsInitialized, Pack, Sealed},
     pubkey::Pubkey,
     rent::Rent,
@@ -161,17 +160,14 @@ impl<'a, 'me> OfferAccount<'a, 'me> {
         })
     }
 
-    pub fn close(self, refund_rent_to: &AccountInfo<'a>) -> Result<(), SimpleDexError> {
+    pub fn close(self, refund_rent_to: &AccountInfo<'a>) -> Result<(), ProgramError> {
         let refund_rent_to_starting_lamports = refund_rent_to.lamports();
         **refund_rent_to.lamports.borrow_mut() = refund_rent_to_starting_lamports
             .checked_add(self.account_info.lamports())
             .ok_or(SimpleDexError::InternalError)?;
 
         **self.account_info.lamports.borrow_mut() = 0;
-        let mut data = self.account_info.data.borrow_mut();
-        let data_len = data.len();
-        sol_memset(*data, 0, data_len);
-        Ok(())
+        self.account_info.realloc(0, true)
     }
 
     pub fn save(self) -> Result<(), ProgramError> {

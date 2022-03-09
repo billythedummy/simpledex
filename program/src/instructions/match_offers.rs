@@ -11,7 +11,7 @@ use spl_associated_token_account::get_associated_token_address;
 use crate::{
     checks::{is_credit_to, is_refund_rent_to, is_refund_to, is_token_program},
     error::SimpleDexError,
-    fee::calc_fee,
+    fee::{calc_fee, MATCHER_EXCESS_BONUS_DIVISOR},
     packun::SerializePacked,
     pda::try_create_offer_pda,
     state::{HoldingAccount, Offer, OfferAccount},
@@ -113,11 +113,11 @@ impl Receipt {
             amt_a_gives.saturating_sub(offering_b.min_willing_to_receive_for(amt_b_gives)?);
         let excess_b =
             amt_b_gives.saturating_sub(offering_a.min_willing_to_receive_for(amt_a_gives)?);
-        let bonus_a = excess_a / 2;
-        let bonus_b = excess_b / 2;
+        let bonus_a = excess_a / MATCHER_EXCESS_BONUS_DIVISOR;
+        let bonus_b = excess_b / MATCHER_EXCESS_BONUS_DIVISOR;
 
         // overflow safety:
-        // bonus_a in [0, amt_a_gives / 2]
+        // bonus_a in [0, amt_a_gives / MATCHER_EXCESS_BONUS_DIVISOR]
         let a_to_b = amt_a_gives - bonus_a;
         let b_to_a = amt_b_gives - bonus_b;
 
