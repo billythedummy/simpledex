@@ -33,7 +33,10 @@
     "rootDir": "./src",
     "types": ["node"],
     "lib": ["ES6", "DOM"],
-    "baseUrl": "./src"
+    "baseUrl": "./src",
+    "paths": {
+      "@/*": ["./*"]
+    }
   },
   "include": ["src/**/*.ts"],
   "exclude": ["node_modules", "tests/**/*.ts"]
