@@ -1,5 +1,4 @@
 import { PublicKey } from "@solana/web3.js";
-import BN from "bn.js";
 
 import { ParseError } from "@/eventFilter/err";
 import {
@@ -27,9 +26,9 @@ function parseOfferFields(fields: Tuple<string, 5>): OfferFields {
   return {
     offer: new PublicKey(fields[0]),
     offerMint: new PublicKey(fields[1]),
-    offering: new BN(fields[2]),
+    offering: BigInt(fields[2]),
     acceptMint: new PublicKey(fields[3]),
-    acceptAtLeast: new BN(fields[4]),
+    acceptAtLeast: BigInt(fields[4]),
   };
 }
 
@@ -63,8 +62,8 @@ function parseMatchOffers(body: string): MatchOffers {
     trade: {
       tokenA: new PublicKey(tokenAStr),
       tokenB: new PublicKey(tokenBStr),
-      tokenAAmount: new BN(csv[1]),
-      tokenBAmount: new BN(csv[3]),
+      tokenAAmount: BigInt(csv[1]),
+      tokenBAmount: BigInt(csv[3]),
     },
   };
 }

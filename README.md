@@ -243,7 +243,8 @@ MATCH:<TOKEN-A-BASE58>,<TOKEN-A-AMOUNT>,<TOKEN-B-BASE58>,<TOKEN-B-AMOUNT>,<OFFER
 
 **Example:**
 
-100 USDC was just exchanged for 1 wSOL between offering_a 4Rf9mGD7FeYknun5JczX5nGLTfQuS1GRjNVfkEMKE92b and offering_b 9oKrJ9iiEnCC7bewcRFbcdo4LKL2PhUEqcu8gH2eDbVM
+100 USDC was just exchanged for 1 wSOL between offering_a 4Rf9mGD7FeYknun5JczX5nGLTfQuS1GRjNVfkEMKE92b and offering_b 9oKrJ9iiEnCC7bewcRFbcdo4LKL2PhUEqcu8gH2eDbVM.
+offering_a was closed, offering_b has 10 USDC left to offer.
 
 ```
 Program log: MATCH:So11111111111111111111111111111111111111112,1,EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v,100,4Rf9mGD7FeYknun5JczX5nGLTfQuS1GRjNVfkEMKE92b,0,0,9oKrJ9iiEnCC7bewcRFbcdo4LKL2PhUEqcu8gH2eDbVM,10,0.1
@@ -269,11 +270,3 @@ We don't. The fastest matchers (which can be the trader himself) win and determi
 Other options:
 
 - having fees scale with time passed. May introduce perverse incentive of matchers waiting for max amount of time before matching.
-
-### Revival attacks on closed offer accounts or holding accounts by griefing matchers
-
-Options:
-
-- ignore. Takes around 2000 SOL to completely block a pubkey from a market by revival attacking all possible 65536 offer and holding accounts for a token pair. Just have to wait for v1.9.0 to drop.
-- check that only other match instructions can follow a match instruction in a transaction.
-- handle zeroed out accounts. Only works for offer accounts because spl token initializeAccount is permissionless.

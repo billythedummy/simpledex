@@ -1,5 +1,4 @@
 import { PublicKey } from "@solana/web3.js";
-import BN from "bn.js";
 
 export const CREATE_OFFER_EVENT_TAG = "CREATE";
 export const CANCEL_OFFER_EVENT_TAG = "CANCEL";
@@ -17,9 +16,9 @@ export type EventTypeTag =
 export interface OfferFields {
   offer: PublicKey;
   offerMint: PublicKey;
-  offering: BN;
+  offering: bigint;
   acceptMint: PublicKey;
-  acceptAtLeast: BN;
+  acceptAtLeast: bigint;
 }
 
 export type CreateOffer = OfferFields & { tag: CreateOfferEventTag };
@@ -33,8 +32,8 @@ export type MatchOffers = {
   trade: {
     tokenA: PublicKey;
     tokenB: PublicKey;
-    tokenAAmount: BN;
-    tokenBAmount: BN;
+    tokenAAmount: bigint;
+    tokenBAmount: bigint;
   };
 };
 
