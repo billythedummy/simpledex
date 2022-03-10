@@ -4,8 +4,9 @@ import { PublicKey } from "@solana/web3.js";
 import { PROGRAM_ID } from "@/consts";
 
 function u16ToBuffer(n: number): Uint8Array {
-  const res = Buffer.alloc(2);
-  u16().encode(n, res);
+  const u = u16();
+  const res = Buffer.alloc(u.span);
+  u.encode(n, res);
   return res;
 }
 

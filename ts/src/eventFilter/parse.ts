@@ -90,8 +90,19 @@ function parseCancelOffer(body: string): CancelOffer {
   };
 }
 
+const PROGRAM_LOG_PREFIX = "Program Log: ";
+
+/**
+ *
+ * @param log the raw log string returned in @solana/web3.js:Log
+ * @returns
+ */
 export function parseLog(log: string): SimpleDexEvent | null {
-  const tagAndBody = log.split(":");
+  const firstSplit = log.split(PROGRAM_LOG_PREFIX);
+  if (firstSplit.length < 2) {
+    return null;
+  }
+  const tagAndBody = firstSplit[1].split(":");
   const maybeTag = tagAndBody[0];
   // do not dereference tagAndBody[1] here, since it might throw if not event
   switch (maybeTag) {

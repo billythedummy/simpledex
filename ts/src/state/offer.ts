@@ -76,7 +76,7 @@ export class Offer implements RawOffer {
 
   public readonly holdingAddress: PublicKey;
 
-  private constructor(
+  constructor(
     rawOffer: RawOffer,
     address: PublicKey,
     holdingAddress: PublicKey,

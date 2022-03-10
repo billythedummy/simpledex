@@ -38,3 +38,15 @@ export type MatchOffers = {
 };
 
 export type SimpleDexEvent = CreateOffer | CancelOffer | MatchOffers;
+
+export function isCreateOffer(x: SimpleDexEvent | null): x is CreateOffer {
+  return x ? x.tag === CREATE_OFFER_EVENT_TAG : false;
+}
+
+export function isCancelOffer(x: SimpleDexEvent | null): x is CancelOffer {
+  return x ? x.tag === CANCEL_OFFER_EVENT_TAG : false;
+}
+
+export function isMatchOffers(x: SimpleDexEvent | null): x is MatchOffers {
+  return x ? x.tag === MATCH_OFFERS_EVENT_TAG : false;
+}
