@@ -72,6 +72,7 @@
     "@solana/buffer-layout": "^4.0.0",
     "@solana/buffer-layout-utils": "^0.2.0",
     "@solana/spl-token": "^0.2.0",
-    "@solana/web3.js": "^1.36.0"
+    "@solana/web3.js": "^1.36.0",
+    "decimal.js": "^10.3.1"
   }
 }

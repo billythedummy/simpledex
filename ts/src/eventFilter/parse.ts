@@ -24,7 +24,7 @@ import { isTuple, Tuple } from "@/typeUtils";
  */
 function parseOfferFields(fields: Tuple<string, 5>): OfferFields {
   return {
-    offer: new PublicKey(fields[0]),
+    address: new PublicKey(fields[0]),
     offerMint: new PublicKey(fields[1]),
     offering: BigInt(fields[2]),
     acceptMint: new PublicKey(fields[3]),

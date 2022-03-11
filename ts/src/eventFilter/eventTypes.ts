@@ -14,7 +14,7 @@ export type EventTypeTag =
   | MatchOffersEventTag;
 
 export interface OfferFields {
-  offer: PublicKey;
+  address: PublicKey;
   offerMint: PublicKey;
   offering: bigint;
   acceptMint: PublicKey;

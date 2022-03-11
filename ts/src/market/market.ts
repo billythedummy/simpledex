@@ -1,8 +1,41 @@
 import { getMint, Mint } from "@solana/spl-token";
 import { Connection, PublicKey } from "@solana/web3.js";
+import Decimal from "decimal.js";
 
 import { PROGRAM_ID } from "@/consts";
+import { EventFilterASTNode, SDF } from "@/eventFilter/eventFilter";
+import {
+  CancelOffer,
+  CreateOffer,
+  isCancelOffer,
+  isCreateOffer,
+  isMatchOffers,
+  MatchOffers,
+  OfferFields,
+  SimpleDexEvent,
+} from "@/eventFilter/eventTypes";
+import { parseLog } from "@/eventFilter/parse";
+import { MarketOutOfSyncError } from "@/market/err";
+import { L2Entry } from "@/market/types";
 import { Offer, OFFER_LAYOUT } from "@/state";
+
+function sortHighestBidFirst(a: OfferFields, b: OfferFields): number {
+  // higher: o1 / a1 > o2 / a2 => o1*a2 > o2*a1
+  const aVal = a.offering * b.acceptAtLeast;
+  const bVal = b.offering * a.acceptAtLeast;
+  if (aVal > bVal) return -1;
+  if (aVal < bVal) return 1;
+  return 0;
+}
+
+function sortLowestAskFirst(a: OfferFields, b: OfferFields): number {
+  // lower: a1 / o1 < a2 / o2 => a1*o2 < a2*o1
+  const aVal = a.acceptAtLeast * b.offering;
+  const bVal = b.acceptAtLeast * a.offering;
+  if (aVal < bVal) return -1;
+  if (aVal > bVal) return 1;
+  return 0;
+}
 
 /**
  *
@@ -29,6 +62,10 @@ export class Market {
 
   public quoteToken: Mint | null;
 
+  private eventCallbacks: Map<number, (event: SimpleDexEvent) => void>;
+
+  private eventListener: number | null;
+
   /**
    *
    * @param connection
@@ -47,14 +84,35 @@ export class Market {
     this.askOffers = [];
     this.baseToken = null;
     this.quoteToken = null;
+    this.eventCallbacks = new Map();
+    this.eventListener = null;
   }
 
-  async loadBaseToken(): Promise<Mint> {
+  static async init(
+    connection: Connection,
+    baseTokenAddr: PublicKey,
+    quoteTokenAddr: PublicKey,
+    programId: PublicKey = PROGRAM_ID,
+  ): Promise<Market> {
+    const market = new Market(
+      connection,
+      baseTokenAddr,
+      quoteTokenAddr,
+      programId,
+    );
+    await market.loadBaseToken();
+    await market.loadQuoteToken();
+    await market.loadAllOffers();
+    market.startLiveUpdates();
+    return market;
+  }
+
+  public async loadBaseToken(): Promise<Mint> {
     this.baseToken = await getMint(this.connection, this.baseTokenAddr);
     return this.baseToken;
   }
 
-  async loadQuoteToken(): Promise<Mint> {
+  public async loadQuoteToken(): Promise<Mint> {
     this.quoteToken = await getMint(this.connection, this.quoteTokenAddr);
     return this.quoteToken;
   }
@@ -64,46 +122,32 @@ export class Market {
    * Note: getProgramAccounts() is very expensive for the RPC,
    * try to use this only once on initialization.
    */
-  async loadAllOffers(): Promise<Map<string, Offer>> {
+  public async loadAllOffers(): Promise<Map<string, Offer>> {
     // TODO: this may be too taxing for RPC, might need to do it sequentially?
     await Promise.all([this.loadAllBids(), this.loadAllAsks()]);
     return this.offers;
   }
 
-  async loadAllBids(): Promise<void> {
+  public async loadAllBids(): Promise<void> {
     const allBids = await this.loadAllOfferAccountsByTokens(
       this.quoteTokenAddr,
       this.baseTokenAddr,
     );
-    const prices = Market.offersToPriceInfo(allBids);
-    // higher: o1 / a1 > o2 / a2 => o1*a2 > o2*a1
-    this.bidOffers = prices
-      .sort((a, b) => {
-        const aVal = a.offering * b.acceptAtLeast;
-        const bVal = b.offering * a.acceptAtLeast;
-        if (aVal > bVal) return -1;
-        if (aVal < bVal) return 1;
-        return 0;
-      })
+    // sort is in-place but its fine here
+    this.bidOffers = allBids
+      .sort(sortHighestBidFirst)
       .map((o) => o.address.toString());
     this.upsertOffers(allBids);
   }
 
-  async loadAllAsks(): Promise<void> {
+  public async loadAllAsks(): Promise<void> {
     const allAsks = await this.loadAllOfferAccountsByTokens(
       this.baseTokenAddr,
       this.quoteTokenAddr,
     );
-    const prices = Market.offersToPriceInfo(allAsks);
-    // lower: a1 / o1 < a2 / o2 => a1*o2 < a2*o1
-    this.bidOffers = prices
-      .sort((a, b) => {
-        const aVal = a.acceptAtLeast * b.offering;
-        const bVal = b.acceptAtLeast * a.offering;
-        if (aVal < bVal) return -1;
-        if (aVal > bVal) return 1;
-        return 0;
-      })
+    // sort is in-place but its fine here
+    this.bidOffers = allAsks
+      .sort(sortLowestAskFirst)
       .map((o) => o.address.toString());
     this.upsertOffers(allAsks);
   }
@@ -114,17 +158,71 @@ export class Market {
     });
   }
 
-  private static offersToPriceInfo(
-    offers: Offer[],
-  ): { address: PublicKey; offering: bigint; acceptAtLeast: bigint }[] {
-    return offers.map((offer) => ({
-      address: offer.address,
-      offering: offer.offering,
-      acceptAtLeast: offer.acceptAtLeast,
-    }));
+  /**
+   * Loads offer from on-chain if offer missing from this.offers
+   * @param offerFieldsItems
+   */
+  private async updateOffers(offerFieldsItems: OfferFields[]): Promise<void> {
+    const promises = offerFieldsItems.map(async (offerFields) => {
+      const existing = this.offers.get(offerFields.address.toString());
+      if (existing) {
+        const { offering, acceptAtLeast } = offerFields;
+        existing.offering = offering;
+        existing.acceptAtLeast = acceptAtLeast;
+        return existing;
+      }
+      return Offer.loadByAddress(
+        this.connection,
+        offerFields.address,
+        this.connection.commitment,
+        this.programId,
+      );
+    });
+    const updatedOffers = await Promise.all(promises);
+    this.upsertOffers(updatedOffers);
   }
 
-  async loadAllOfferAccountsByTokens(
+  private deleteOffers(offerAddrs: string[]): void {
+    offerAddrs.forEach((addr) => {
+      this.offers.delete(addr);
+    });
+  }
+
+  /**
+   * Insert an offer's pubkey into its corresponding L2 orderbook array (this.askOffers or this.bidOffers)
+   * while maintaining its price sorted order.
+   * Assumes pubkey is not already in the array.
+   * @param offer
+   * @returns
+   */
+  private insertSortedL2(offer: OfferFields): void {
+    const isAsk = offer.acceptMint.equals(this.quoteTokenAddr);
+    const [l2, sortFn] = isAsk
+      ? [this.askOffers, sortLowestAskFirst]
+      : [this.bidOffers, sortHighestBidFirst];
+    const addrStr = offer.address.toString();
+    for (let i = 0; i < l2.length; i++) {
+      const existingOffer = this.offers.get(l2[i]);
+      if (!existingOffer) throw new MarketOutOfSyncError();
+      if (sortFn(offer, existingOffer) < 1) {
+        l2.splice(i, 0, addrStr);
+        return;
+      }
+    }
+    l2.push(addrStr);
+  }
+
+  private deleteFromSortedL2(offer: OfferFields): void {
+    const isAsk = offer.acceptMint.equals(this.quoteTokenAddr);
+    const l2 = isAsk ? this.askOffers : this.bidOffers;
+    const addrStr = offer.address.toString();
+    const i = l2.indexOf(addrStr);
+    if (i > -1) {
+      l2.splice(i, 1);
+    }
+  }
+
+  private async loadAllOfferAccountsByTokens(
     offerMint: PublicKey,
     acceptMint: PublicKey,
   ): Promise<Offer[]> {
@@ -154,7 +252,152 @@ export class Market {
     return Promise.all(allOffersPromises);
   }
 
-  public getOffers(): Map<string, Offer> {
-    return this.offers;
+  private isOfMarketPredicate(o: OfferFields): boolean {
+    return (
+      (o.acceptMint.equals(this.quoteTokenAddr) &&
+        o.offerMint.equals(this.baseTokenAddr)) ||
+      (o.offerMint.equals(this.quoteTokenAddr) &&
+        o.acceptMint.equals(this.baseTokenAddr))
+    );
+  }
+
+  private createOfferFilter(): EventFilterASTNode<SimpleDexEvent, CreateOffer> {
+    return SDF.narrowType(isCreateOffer).filter(this.isOfMarketPredicate);
+  }
+
+  private registerCreateOfferCallback() {
+    this.onEvent(async (event) => {
+      const offerFields = this.createOfferFilter().execute(event);
+      if (offerFields) {
+        // load full order account from on-chain
+        const offer = await Offer.loadByAddress(
+          this.connection,
+          offerFields.address,
+          this.connection.commitment,
+          this.programId,
+        );
+        this.insertSortedL2(offer);
+        this.upsertOffers([offer]);
+      }
+    });
+  }
+
+  private cancelOfferFilter(): EventFilterASTNode<SimpleDexEvent, CancelOffer> {
+    return SDF.narrowType(isCancelOffer).filter(this.isOfMarketPredicate);
+  }
+
+  private registerCancelOfferCallback() {
+    this.onEvent((event) => {
+      const offerFields = this.cancelOfferFilter().execute(event);
+      if (offerFields) {
+        this.deleteFromSortedL2(offerFields);
+        this.deleteOffers([offerFields.address.toString()]);
+      }
+    });
+  }
+
+  private matchOffersFilter(): EventFilterASTNode<SimpleDexEvent, MatchOffers> {
+    // if updatedOfferA is of this market, then updatedOfferB must be of this market too
+    return SDF.narrowType(isMatchOffers).filter((e) =>
+      this.isOfMarketPredicate(e.updatedOfferA),
+    );
+  }
+
+  private registerMatchOffersCallback() {
+    this.onEvent((event) => {
+      const matchEvent = this.matchOffersFilter().execute(event);
+      if (matchEvent) {
+        const { updatedOfferA, updatedOfferB } = matchEvent;
+        this.updateOffers([updatedOfferA, updatedOfferB]);
+      }
+    });
+  }
+
+  public onEvent(callback: (event: SimpleDexEvent) => void): number {
+    let id = this.eventCallbacks.size;
+    while (this.eventCallbacks.has(id)) {
+      id++;
+    }
+    this.eventCallbacks.set(id, callback);
+    return id;
+  }
+
+  public removeOnEventListener(id: number): void {
+    this.eventCallbacks.delete(id);
+  }
+
+  public registerAllEventsListener(): void {
+    this.eventListener = this.connection.onLogs(this.programId, (l) => {
+      l.logs.forEach((log) => {
+        const event = parseLog(log);
+        if (event !== null) {
+          Array.from(this.eventCallbacks.values()).forEach((cb) => cb(event));
+        }
+      });
+    });
+  }
+
+  public removeAllEventsListener(): Promise<void> {
+    if (this.eventListener !== null) {
+      return this.connection.removeOnLogsListener(this.eventListener);
+    }
+    return Promise.resolve();
+  }
+
+  public startLiveUpdates(): void {
+    this.registerCreateOfferCallback();
+    this.registerCancelOfferCallback();
+    this.registerMatchOffersCallback();
+    this.registerAllEventsListener();
+  }
+
+  public getL2Bids(): Promise<L2Entry[]> {
+    return this.getL2(true);
+  }
+
+  public getL2Asks(): Promise<L2Entry[]> {
+    return this.getL2(false);
+  }
+
+  /**
+   *
+   * @param isBid
+   * @returns
+   * @throws MarketOutOfSyncError if locally cached market data is out of sync
+   */
+  private async getL2(isBid: boolean): Promise<L2Entry[]> {
+    const baseToken = this.baseToken ?? (await this.loadBaseToken());
+    const quoteToken = this.quoteToken ?? (await this.loadQuoteToken());
+    const offerKeys = isBid ? this.bidOffers : this.askOffers;
+    const baseTokenDiv = 10 ** baseToken.decimals;
+    const quoteTokenDiv = 10 ** quoteToken.decimals;
+    const res: L2Entry[] = [];
+    offerKeys.forEach((offerKey) => {
+      const offer = this.offers.get(offerKey);
+      if (!offer) throw new MarketOutOfSyncError();
+      const [nBaseTokens, nQuoteTokens] = isBid
+        ? [offer.acceptAtLeast, offer.offering]
+        : [offer.offering, offer.acceptAtLeast];
+      const nQuoteDecimals = new Decimal(nQuoteTokens.toString());
+      const nBaseDecimals = new Decimal(nBaseTokens.toString());
+      const priceVal = nQuoteDecimals.mul(baseTokenDiv).div(nBaseDecimals);
+      const priceDecimals = priceVal.div(quoteTokenDiv);
+      const size = nBaseTokens;
+      const sizeDecimals = nBaseDecimals.div(baseTokenDiv);
+      const price = BigInt(priceVal.round().toString());
+      let i = res.length - 1;
+      if (res.length === 0 || res[i].price !== price) {
+        res.push({
+          priceDecimals,
+          sizeDecimals,
+          price,
+          size,
+        });
+        i++;
+      }
+      res[i].size += size;
+      res[i].sizeDecimals = res[i].sizeDecimals.add(sizeDecimals);
+    });
+    return res;
   }
 }

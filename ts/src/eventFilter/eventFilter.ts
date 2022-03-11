@@ -16,17 +16,9 @@ import { SimpleDexEvent } from "@/eventFilter/eventTypes";
  *                      .filter(e => new Decimal(e.tokenBAmount).div(new Decimal(e.tokenAAmount)).gt(LIMIT_PRICE));
  * const filter = a.or(b);
  *
- * // ... somewhere in the application code (e.g. Market class) ...
- * connection.onLogs(PROGRAM_ID, (l) => {
- *   for (const log of l.logs) {
- *      const filtered = filter.execute(log);
- *      if (filtered !== null) callback(filtered);
- *   }
- * });
- *
- * Create your own nodes that extend `EventFilterASTNode` by overriding `executeOnData()` to define how to operate on non-null data
+ * Create your own nodes that extend the `EventFilterASTNode` by overriding `executeOnData()` to define how to operate on non-null data
  */
-export class EventFilterASTNode<I, O> {
+export abstract class EventFilterASTNode<I, O> {
   constructor(public readonly type: string) {}
 
   execute(data: I | null): O | null {
@@ -35,9 +27,7 @@ export class EventFilterASTNode<I, O> {
   }
 
   // eslint-disable-next-line @typescript-eslint/no-unused-vars, class-methods-use-this
-  executeOnData(_data: I): O | null {
-    throw new Error("Unimplemented");
-  }
+  abstract executeOnData(_data: I): O | null;
 
   narrowType<R extends O>(
     typeGuard: (data: O) => data is R,
@@ -70,6 +60,7 @@ class IdNode<I> extends EventFilterASTNode<I, I> {
     return data;
   }
 }
+
 /**
  * SimpleDexFilter, the primitive to build event filters from
  */

@@ -49,32 +49,32 @@ export const OFFER_LAYOUT = struct<RawOffer>([
 export const OFFER_SIZE = OFFER_LAYOUT.span;
 
 export class Offer implements RawOffer {
-  public readonly slot: bigint;
+  public slot: bigint;
 
-  public readonly offering: bigint;
+  public offering: bigint;
 
-  public readonly acceptAtLeast: bigint;
+  public acceptAtLeast: bigint;
 
-  public readonly seed: number;
+  public seed: number;
 
-  public readonly bump: number;
+  public bump: number;
 
-  public readonly owner: PublicKey;
+  public owner: PublicKey;
 
-  public readonly offerMint: PublicKey;
+  public offerMint: PublicKey;
 
-  public readonly acceptMint: PublicKey;
+  public acceptMint: PublicKey;
 
-  public readonly refundTo: PublicKey;
+  public refundTo: PublicKey;
 
-  public readonly creditTo: PublicKey;
+  public creditTo: PublicKey;
 
-  public readonly refundRentTo: PublicKey;
+  public refundRentTo: PublicKey;
 
   // cache PDA and ATA
-  public readonly address: PublicKey;
+  public address: PublicKey;
 
-  public readonly holdingAddress: PublicKey;
+  public holdingAddress: PublicKey;
 
   constructor(
     rawOffer: RawOffer,
