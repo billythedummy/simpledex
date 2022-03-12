@@ -137,6 +137,11 @@ impl<'a, 'me> HoldingAccount<'a, 'me> {
             offer.account_info.key,
             &[],
         )?;
+        solana_program::msg!(
+            "CLOSE HOLDING BEFORE. token_account: {}, holding: {}",
+            self.account_info.lamports(),
+            refund_rent_to.lamports()
+        );
         invoke_signed(
             &ix,
             &[
@@ -146,6 +151,11 @@ impl<'a, 'me> HoldingAccount<'a, 'me> {
             ],
             &[offer_pda_seeds!(offer.data)],
         )?;
+        solana_program::msg!(
+            "CLOSE HOLDING AFTER. token_account: {}, holding: {}",
+            self.account_info.lamports(),
+            refund_rent_to.lamports()
+        );
         Ok(())
     }
 

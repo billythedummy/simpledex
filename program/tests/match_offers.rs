@@ -192,7 +192,7 @@ async fn success_match_exact() {
     let (offering_b_addr, offering_b) = create_and_get_offer(
         &mut env.client,
         &env.recent_blockhash,
-        &env.owner_b, // &env.payer - possible runtime bug. spl-token::close CPI fails with imbalanced instruction if both offers have the same refund_rent_to
+        &env.payer, // &env.payer - possible runtime bug. spl-token::close CPI fails with imbalanced instruction if both offers have the same refund_rent_to
         &env.owner_b,
         &env.owner_b_token_b_account,
         &env.owner_b_token_a_account,

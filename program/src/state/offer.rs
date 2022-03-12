@@ -161,6 +161,11 @@ impl<'a, 'me> OfferAccount<'a, 'me> {
     }
 
     pub fn close(self, refund_rent_to: &AccountInfo<'a>) -> Result<(), ProgramError> {
+        solana_program::msg!(
+            "CLOSE OFFER BEFORE. offer: {}, refund_rent_to: {}",
+            self.account_info.lamports(),
+            refund_rent_to.lamports()
+        );
         self.account_info.realloc(0, true)?;
         let refund_rent_to_starting_lamports = refund_rent_to.lamports();
         **refund_rent_to.lamports.borrow_mut() = refund_rent_to_starting_lamports
@@ -168,6 +173,11 @@ impl<'a, 'me> OfferAccount<'a, 'me> {
             .ok_or(SimpleDexError::NumericalError)?;
 
         **self.account_info.lamports.borrow_mut() = 0;
+        solana_program::msg!(
+            "CLOSE OFFER AFTER. offer: {}, refund_rent_to: {}",
+            self.account_info.lamports(),
+            refund_rent_to.lamports()
+        );
         Ok(())
     }
 
