@@ -6,7 +6,9 @@ use solana_program::{
     msg,
     program_error::ProgramError,
     pubkey::Pubkey,
+    rent::Rent,
     system_program,
+    sysvar::SysvarId,
 };
 use spl_associated_token_account::get_associated_token_address;
 
@@ -50,6 +52,8 @@ pub fn process_create_offer(
     let token_prog = next_account_info(account_info_iter)?;
     let ata_prog = next_account_info(account_info_iter)?;
     let sys_prog = next_account_info(account_info_iter)?;
+    // TODO: remove once spl-ATA 1.0.5 drops
+    let rent = next_account_info(account_info_iter)?;
 
     // Deser
     let refund_to_token_acc = token_account_checked(refund_to)?;
@@ -94,10 +98,12 @@ pub fn process_create_offer(
     is_token_program(token_prog)?;
     is_ata_program(ata_prog)?;
     is_system_program(sys_prog)?;
+    // rely on ATA CPI safety check to make sure rent is indeed rent sysvar
 
     // Process
-    let created_holding =
-        HoldingAccount::create_to(holding, payer, offer, offer_mint, sys_prog, token_prog)?;
+    let created_holding = HoldingAccount::create_to(
+        holding, payer, offer, offer_mint, sys_prog, token_prog, rent,
+    )?;
     let created_offer = OfferAccount::create_to(
         offer,
         payer,
@@ -134,10 +140,10 @@ fn log_success(
     // Comparison:
     // concat_string! prog size 212120 bytes
     // format str prog size 209208 bytes
-    // TODO: check number of compute units used
-    // use concat_string::concat_string;
-    // let m = concat_string!("NEW:", created_offer.to_string(), ",", offer_mint.to_string(), ",", offering.to_string(), ",", accept_mint.to_string(), ",", accept_at_least.to_string());
-    // msg!(&m);
+    //
+    // concat_string! BPF instructions executed 100638. compute units 139454
+    // format str BPF instructions exec 65614. compute units 96931
+    // with no logs at all, BPF instructions exec 29140. compute units 63314
     msg!(
         "NEW:{},{},{},{},{}",
         created_offer.to_string(),
@@ -179,6 +185,8 @@ pub fn create_offer(
         AccountMeta::new_readonly(spl_token::id(), false),
         AccountMeta::new_readonly(spl_associated_token_account::id(), false),
         AccountMeta::new_readonly(system_program::id(), false),
+        // TODO: remove once spl-ATA 1.0.5 drops
+        AccountMeta::new_readonly(Rent::id(), false),
     ];
 
     let mut data = [0; SimpleDexInstruction::PACKED_LEN_CREATE_OFFER];

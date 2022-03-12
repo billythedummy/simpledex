@@ -2,15 +2,17 @@
 
 mod helpers;
 
-use std::assert_eq;
-
-use helpers::{create_token_account, create_two_mints, mint_tokens, program_test};
-use simpledex::{instructions::create_offer, pda::try_find_offer_pda, state::Offer};
-use solana_program::{hash::Hash, program_pack::Pack, pubkey::Pubkey};
+use helpers::{
+    create_and_get_offer, create_token_account, create_two_mints, mint_tokens, program_test,
+    transfer,
+};
+use simpledex::instructions::cancel_offer;
+use solana_program::{hash::Hash, pubkey::Pubkey};
 use solana_program_test::{tokio, BanksClient};
 use solana_sdk::{signature::Keypair, signer::Signer, transaction::Transaction};
+use spl_associated_token_account::get_associated_token_address;
 
-struct CreateOfferEnv {
+struct CancelOfferEnv {
     client: BanksClient,
     recent_blockhash: Hash,
     payer: Keypair,
@@ -21,7 +23,7 @@ struct CreateOfferEnv {
     token_b_account: Pubkey,
 }
 
-async fn setup(mint_tokens_a: u64, mint_tokens_b: u64) -> CreateOfferEnv {
+async fn setup(mint_tokens_a: u64, mint_tokens_b: u64) -> CancelOfferEnv {
     let (mut client, payer, recent_blockhash) = program_test().start().await;
     let owner = Keypair::new();
     let token_a_account = Keypair::new();
@@ -70,7 +72,17 @@ async fn setup(mint_tokens_a: u64, mint_tokens_b: u64) -> CreateOfferEnv {
     )
     .await
     .unwrap();
-    CreateOfferEnv {
+    // give some lamports to owner to allow him to send the cancel tx
+    // else test will just hang silently
+    transfer(
+        &mut client,
+        &payer,
+        &recent_blockhash,
+        &owner.pubkey(),
+        1_000_000_000,
+    )
+    .await;
+    CancelOfferEnv {
         client,
         recent_blockhash,
         payer,
@@ -88,37 +100,40 @@ async fn success() {
     let offering = 45;
     let accept_at_least = 2;
     let mut env = setup(offering + 5, 0).await;
-    let ix = create_offer(
-        &env.payer.pubkey(),
-        &env.owner.pubkey(),
-        &env.token_a_account,
+
+    let (offer_addr, offer) = create_and_get_offer(
+        &mut env.client,
+        &env.recent_blockhash,
+        &env.payer,
+        &env.owner,
         &env.token_a_account,
         &env.token_b_account,
-        &env.payer.pubkey(),
         &env.token_a,
         &env.token_b,
         seed,
         offering,
         accept_at_least,
     )
-    .unwrap();
-    let mut transaction = Transaction::new_with_payer(&[ix], Some(&env.payer.pubkey()));
-    transaction.sign(&[&env.payer, &env.owner], env.recent_blockhash);
-    env.client.process_transaction(transaction).await.unwrap();
-    let (offer_addr, bump) =
-        try_find_offer_pda(&env.owner.pubkey(), &env.token_a, &env.token_b, seed).unwrap();
-    let created_offer = env.client.get_account(offer_addr).await.unwrap().unwrap();
-    let offer = Offer::unpack_from_slice(created_offer.data.as_slice()).unwrap();
-    assert_eq!(offer.offering, offering);
-    assert_eq!(offer.accept_at_least, accept_at_least);
-    assert_eq!(offer.seed, seed);
-    assert_eq!(offer.bump, bump);
-    assert_eq!(offer.owner, env.owner.pubkey());
-    assert_eq!(offer.offer_mint, env.token_a);
-    assert_eq!(offer.accept_mint, env.token_b);
-    assert_eq!(offer.refund_to, env.token_a_account);
-    assert_eq!(offer.credit_to, env.token_b_account);
-    assert_eq!(offer.refund_rent_to, env.payer.pubkey());
+    .await;
+
+    let payer_lamports_before_cancel = env.client.get_balance(env.payer.pubkey()).await.unwrap();
+
+    let cancel_ix = cancel_offer(&offer).unwrap();
+    let mut cancel_tx = Transaction::new_with_payer(&[cancel_ix], Some(&env.owner.pubkey()));
+    cancel_tx.sign(&[&env.owner], env.recent_blockhash);
+    env.client.process_transaction(cancel_tx).await.unwrap();
+    // check offer and holding no longer exists
+    assert!(env.client.get_account(offer_addr).await.unwrap().is_none());
+    let holding_addr = get_associated_token_address(&offer_addr, &offer.offer_mint);
+    assert!(env
+        .client
+        .get_account(holding_addr)
+        .await
+        .unwrap()
+        .is_none());
+
+    let payer_lamports_after_cancel = env.client.get_balance(env.payer.pubkey()).await.unwrap();
+    assert!(payer_lamports_after_cancel > payer_lamports_before_cancel);
 }
 
 // TODO: more tests

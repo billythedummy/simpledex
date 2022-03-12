@@ -3,6 +3,7 @@ use std::io::Cursor;
 use solana_program::{
     account_info::{next_account_info, AccountInfo},
     instruction::{AccountMeta, Instruction},
+    msg,
     program_error::ProgramError,
     pubkey::Pubkey,
 };
@@ -71,20 +72,37 @@ pub fn process_match_offers(accounts: &[AccountInfo]) -> Result<(), ProgramError
     holding_b_acc.transfer(&offering_b_acc, credit_to_a, receipt.b_to_a)?;
     holding_b_acc.transfer(&offering_b_acc, matcher_b, receipt.b_to_matcher)?;
 
-    update_offer_accounts(
+    let token_a = holding_a_acc.data.mint;
+    let token_b = holding_b_acc.data.mint;
+
+    let (offering_a_new_offering, offering_a_new_accept_at_least) = update_offer_accounts(
         offering_a_acc,
         holding_a_acc,
         amt_a_gives,
         refund_to_a,
         refund_rent_to_a,
     )?;
-    update_offer_accounts(
+
+    let (offering_b_new_offering, offering_b_new_accept_at_least) = update_offer_accounts(
         offering_b_acc,
         holding_b_acc,
         amt_b_gives,
         refund_to_b,
         refund_rent_to_b,
     )?;
+
+    log_success(
+        &token_a,
+        receipt.a_to_b,
+        &token_b,
+        receipt.b_to_a,
+        offering_a.key,
+        offering_a_new_offering,
+        offering_a_new_accept_at_least,
+        offering_b.key,
+        offering_b_new_offering,
+        offering_b_new_accept_at_least,
+    );
 
     Ok(())
 }
@@ -137,23 +155,55 @@ impl Receipt {
     }
 }
 
+/// Returns (new offering, new accept_at_least)
 fn update_offer_accounts<'a, 'me>(
     mut offer_acc: OfferAccount<'a, 'me>,
     mut holding_acc: HoldingAccount<'a, 'me>,
     amount_given: u64,
     refund_to: &AccountInfo<'a>,
     refund_rent_to: &AccountInfo<'a>,
-) -> Result<(), ProgramError> {
+) -> Result<(u64, u64), ProgramError> {
     offer_acc.data = offer_acc.data.update_offer_matched(amount_given)?;
+    let ret = (offer_acc.data.offering, offer_acc.data.accept_at_least);
     match offer_acc.data.is_closed() {
         true => {
             holding_acc = holding_acc.reload()?;
             holding_acc.close(&offer_acc, refund_to, refund_rent_to)?;
             offer_acc.close(refund_rent_to)?;
-            Ok(())
         }
-        false => offer_acc.save(),
+        false => {
+            offer_acc.save()?;
+        }
     }
+    Ok(ret)
+}
+
+#[allow(clippy::too_many_arguments)]
+fn log_success(
+    token_a: &Pubkey,
+    a_to_b: u64,
+    token_b: &Pubkey,
+    b_to_a: u64,
+    offering_a: &Pubkey,
+    offering_a_new_offering: u64,
+    offering_a_new_accept_at_least: u64,
+    offering_b: &Pubkey,
+    offering_b_new_offering: u64,
+    offering_b_new_accept_at_least: u64,
+) {
+    msg!(
+        "MATCH:{},{},{},{},{},{},{},{},{},{}",
+        token_a,
+        a_to_b,
+        token_b,
+        b_to_a,
+        offering_a,
+        offering_a_new_offering,
+        offering_a_new_accept_at_least,
+        offering_b,
+        offering_b_new_offering,
+        offering_b_new_accept_at_least,
+    );
 }
 
 pub fn match_offers(

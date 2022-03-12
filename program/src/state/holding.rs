@@ -2,12 +2,10 @@
 
 use solana_program::{
     account_info::AccountInfo,
-    instruction::{AccountMeta, Instruction},
     program::{invoke, invoke_signed},
     program_error::ProgramError,
-    pubkey::Pubkey,
 };
-use spl_associated_token_account::get_associated_token_address;
+use spl_associated_token_account::{create_associated_token_account, get_associated_token_address};
 use spl_token::{
     instruction::{close_account, transfer},
     state::Account as TokenAccount,
@@ -29,10 +27,12 @@ impl<'a, 'me> HoldingAccount<'a, 'me> {
         offer_mint: &AccountInfo<'a>,
         sys_prog: &AccountInfo<'a>,
         token_prog: &AccountInfo<'a>,
+        rent_sysvar: &AccountInfo<'a>,
     ) -> Result<Self, ProgramError> {
-        let ix = create_ata_instruction(payer.key, offer_acc.key, offer_mint.key);
+        let create_ata_ix =
+            create_associated_token_account(payer.key, offer_acc.key, offer_mint.key);
         invoke(
-            &ix,
+            &create_ata_ix,
             &[
                 payer.to_owned(),
                 new_holding_account.to_owned(),
@@ -40,6 +40,7 @@ impl<'a, 'me> HoldingAccount<'a, 'me> {
                 offer_mint.to_owned(),
                 sys_prog.to_owned(),
                 token_prog.to_owned(),
+                rent_sysvar.to_owned(),
             ],
         )?;
         Ok(Self {
@@ -128,10 +129,7 @@ impl<'a, 'me> HoldingAccount<'a, 'me> {
         refund_to: &AccountInfo<'a>,
         refund_rent_to: &AccountInfo<'a>,
     ) -> Result<(), ProgramError> {
-        let balance = self.data.amount;
-        if balance > 0 {
-            self.transfer(offer, refund_to, balance)?;
-        }
+        self.transfer(offer, refund_to, self.data.amount)?;
         let ix = close_account(
             &spl_token::id(),
             self.account_info.key,
@@ -147,30 +145,12 @@ impl<'a, 'me> HoldingAccount<'a, 'me> {
                 offer.account_info.to_owned(),
             ],
             &[offer_pda_seeds!(offer.data)],
-        )
+        )?;
+        Ok(())
     }
 
     pub fn reload(mut self) -> Result<Self, ProgramError> {
         self.data = token_account_checked(self.account_info)?;
         Ok(self)
-    }
-}
-
-// TODO: ATA prog on mainnet still needs to pass in rent as sysvar
-// and 1.0.4 was yanked, so I can't import it
-// This will probably only work when mainnet ATA prog is updated
-fn create_ata_instruction(payer: &Pubkey, owner: &Pubkey, mint: &Pubkey) -> Instruction {
-    let associated_account_address = get_associated_token_address(owner, mint);
-    Instruction {
-        program_id: spl_associated_token_account::id(),
-        accounts: vec![
-            AccountMeta::new(*payer, true),
-            AccountMeta::new(associated_account_address, false),
-            AccountMeta::new_readonly(*owner, false),
-            AccountMeta::new_readonly(*mint, false),
-            AccountMeta::new_readonly(solana_program::system_program::id(), false),
-            AccountMeta::new_readonly(spl_token::id(), false),
-        ],
-        data: vec![], // Create instruction is an empty array
     }
 }

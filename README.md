@@ -25,7 +25,7 @@ A simple dex design that makes full use of solana's massively parallel runtime
 
 - Complexity moved off-chain means more work off-chain. For example, to visualize an orderbook, you would need to `getProgramAccounts()` and filter by mints, and then aggregate those together.
 - Live updates are a little more complicated. Instead of simply opening a websocket to listen for changes to a central orderbook account, you need to listen to program logs and update a locally cached state accordingly.
-- Intense order-matching competition can lead to flooding of chain with failed match transactions(?)
+- Intense order-matching competition can lead to flooding of chain with failed match transactions
 
 ## Accounts
 
@@ -103,6 +103,8 @@ Creates a new `Offer`.
   - check program_id
 - [] system_program
   - check program_id
+- [] rent
+  - for backward compatibility with ata program <1.0.5
 
 #### Procedure:
 
@@ -199,7 +201,7 @@ Permissionless instruction to match 2 `Offer`s.
 
 To provide traders with real-time market info, each successful instruction execution should emit a log that can be subscribed to in order to update a locally cached market/orderbook state.
 
-Logs are human readable csv, token amounts are in decimals.
+Logs are human readable csv, token amounts are in token atomic units.
 
 ### CreateOffer
 
@@ -214,7 +216,7 @@ CREATE:<OFFER-PUBKEY-BASE58>,<OFFERING-TOKEN-BASE58>,<OFFER-AMOUNT>,<ACCEPT-TOKE
 Someone just created an offer exchanging 1 wSOL for at least 100 USDC at 4Rf9mGD7FeYknun5JczX5nGLTfQuS1GRjNVfkEMKE92b
 
 ```
-Program log: CREATE:4Rf9mGD7FeYknun5JczX5nGLTfQuS1GRjNVfkEMKE92b,So11111111111111111111111111111111111111112,1,EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v,100
+Program log: CREATE:4Rf9mGD7FeYknun5JczX5nGLTfQuS1GRjNVfkEMKE92b,So11111111111111111111111111111111111111112,1000000000,EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v,100000000
 ```
 
 ### CancelOffer
@@ -230,7 +232,7 @@ CANCEL:<OFFER-PUBKEY-BASE58>,<OFFERING-TOKEN-BASE58>,<OFFER-AMOUNT>,<ACCEPT-TOKE
 Someone just canceled an offer exchanging 1 wSOL for at least 100 USDC at 4Rf9mGD7FeYknun5JczX5nGLTfQuS1GRjNVfkEMKE92b
 
 ```
-Program log: CANCEL:4Rf9mGD7FeYknun5JczX5nGLTfQuS1GRjNVfkEMKE92b,So11111111111111111111111111111111111111112,1,EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v,100
+Program log: CANCEL:4Rf9mGD7FeYknun5JczX5nGLTfQuS1GRjNVfkEMKE92b,So11111111111111111111111111111111111111112,1000000000,EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v,100000000
 ```
 
 ### Match
@@ -247,7 +249,7 @@ MATCH:<TOKEN-A-BASE58>,<TOKEN-A-AMOUNT>,<TOKEN-B-BASE58>,<TOKEN-B-AMOUNT>,<OFFER
 offering_a was closed, offering_b has 10 USDC left to offer.
 
 ```
-Program log: MATCH:So11111111111111111111111111111111111111112,1,EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v,100,4Rf9mGD7FeYknun5JczX5nGLTfQuS1GRjNVfkEMKE92b,0,0,9oKrJ9iiEnCC7bewcRFbcdo4LKL2PhUEqcu8gH2eDbVM,10,0.1
+Program log: MATCH:So11111111111111111111111111111111111111112,1000000000,EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v,100000000,4Rf9mGD7FeYknun5JczX5nGLTfQuS1GRjNVfkEMKE92b,0,0,9oKrJ9iiEnCC7bewcRFbcdo4LKL2PhUEqcu8gH2eDbVM,10000000,100000000
 ```
 
 ## QnA

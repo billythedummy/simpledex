@@ -8,3 +8,6 @@
 **/*.rs.bk
 
 node_modules
+
+# soteria
+.coderrect

@@ -161,13 +161,14 @@ impl<'a, 'me> OfferAccount<'a, 'me> {
     }
 
     pub fn close(self, refund_rent_to: &AccountInfo<'a>) -> Result<(), ProgramError> {
+        self.account_info.realloc(0, true)?;
         let refund_rent_to_starting_lamports = refund_rent_to.lamports();
         **refund_rent_to.lamports.borrow_mut() = refund_rent_to_starting_lamports
             .checked_add(self.account_info.lamports())
             .ok_or(SimpleDexError::InternalError)?;
 
         **self.account_info.lamports.borrow_mut() = 0;
-        self.account_info.realloc(0, true)
+        Ok(())
     }
 
     pub fn save(self) -> Result<(), ProgramError> {
