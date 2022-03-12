@@ -1,3 +1,4 @@
+import { PublicKey } from "@solana/web3.js";
 import Decimal from "decimal.js";
 
 /**
@@ -22,4 +23,14 @@ export type L2Entry = {
    * size in base token atomics
    */
   size: bigint;
+};
+
+export type Side = "bid" | "ask";
+
+export type MarketCreateOfferOptions = {
+  payer?: PublicKey;
+  payFrom?: PublicKey;
+  refundTo?: PublicKey;
+  creditTo?: PublicKey;
+  refundRentTo?: PublicKey;
 };

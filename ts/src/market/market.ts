@@ -1,5 +1,5 @@
-import { getMint, Mint } from "@solana/spl-token";
-import { Connection, PublicKey } from "@solana/web3.js";
+import { getAssociatedTokenAddress, getMint, Mint } from "@solana/spl-token";
+import { Connection, PublicKey, TransactionInstruction } from "@solana/web3.js";
 import Decimal from "decimal.js";
 
 import { PROGRAM_ID } from "@/consts";
@@ -15,8 +15,9 @@ import {
   SimpleDexEvent,
 } from "@/eventFilter/eventTypes";
 import { parseLog } from "@/eventFilter/parse";
-import { MarketOutOfSyncError } from "@/market/err";
-import { L2Entry } from "@/market/types";
+import { createOfferInstruction as _createOfferInstruction } from "@/instructions";
+import { AllOfferSeedsUsedError, MarketOutOfSyncError } from "@/market/err";
+import { L2Entry, MarketCreateOfferOptions, Side } from "@/market/types";
 import { Offer, OFFER_LAYOUT } from "@/state";
 
 function sortHighestBidFirst(a: OfferFields, b: OfferFields): number {
@@ -351,12 +352,91 @@ export class Market {
     this.registerAllEventsListener();
   }
 
+  public getAllOffersByOwner(owner: PublicKey): Offer[] {
+    return Array.from(this.offers.values()).filter((offer) =>
+      offer.owner.equals(owner),
+    );
+  }
+
+  public getAllBidsByOwner(owner: PublicKey): Offer[] {
+    return this.getAllOffersByOwner(owner).filter((offer) =>
+      offer.offerMint.equals(this.quoteTokenAddr),
+    );
+  }
+
+  public getAllAsksByOwner(owner: PublicKey): Offer[] {
+    return this.getAllOffersByOwner(owner).filter((offer) =>
+      offer.offerMint.equals(this.baseTokenAddr),
+    );
+  }
+
+  public findNextUnusedSeed(owner: PublicKey, side: Side): number {
+    const allOwnerOffers =
+      side === "bid"
+        ? this.getAllBidsByOwner(owner)
+        : this.getAllAsksByOwner(owner);
+    const allSeeds = allOwnerOffers.map((offer) => offer.seed).sort();
+    for (let i = 0; i < allSeeds.length - 1; i++) {
+      const curr = allSeeds[i];
+      const next = allSeeds[i + 1];
+      if (next > curr + 1) {
+        return curr + 1;
+      }
+    }
+    const last = allSeeds[allSeeds.length - 1];
+    if (last === 65535) throw new AllOfferSeedsUsedError();
+    return last + 1;
+  }
+
+  public async createOfferInstruction(
+    owner: PublicKey,
+    side: Side,
+    offering: bigint,
+    acceptAtLeast: bigint,
+    opts?: MarketCreateOfferOptions,
+  ): Promise<TransactionInstruction> {
+    const [offerMint, acceptMint] =
+      side === "bid"
+        ? [this.quoteTokenAddr, this.baseTokenAddr]
+        : [this.baseTokenAddr, this.quoteTokenAddr];
+    const acceptedOpts = opts ?? {
+      payer: undefined,
+      payFrom: undefined,
+      refundTo: undefined,
+      creditTo: undefined,
+      refundRentTo: undefined,
+    };
+    const { payer, payFrom, refundTo, creditTo, refundRentTo } = acceptedOpts;
+    const payerAddr = payer ?? owner;
+    const payFromAddr =
+      payFrom ?? (await getAssociatedTokenAddress(offerMint, owner, true));
+    const refundToAddr = refundTo ?? payFromAddr;
+    const creditToAddr =
+      creditTo ?? (await getAssociatedTokenAddress(acceptMint, owner, true));
+    const refundRentToAddr = refundRentTo ?? owner;
+    const seed = this.findNextUnusedSeed(owner, side);
+    return _createOfferInstruction(
+      payerAddr,
+      owner,
+      payFromAddr,
+      refundToAddr,
+      creditToAddr,
+      refundRentToAddr,
+      offerMint,
+      acceptMint,
+      seed,
+      offering,
+      acceptAtLeast,
+      this.programId,
+    );
+  }
+
   public getL2Bids(): Promise<L2Entry[]> {
-    return this.getL2(true);
+    return this.getL2("bid");
   }
 
   public getL2Asks(): Promise<L2Entry[]> {
-    return this.getL2(false);
+    return this.getL2("ask");
   }
 
   /**
@@ -365,9 +445,10 @@ export class Market {
    * @returns
    * @throws MarketOutOfSyncError if locally cached market data is out of sync
    */
-  private async getL2(isBid: boolean): Promise<L2Entry[]> {
+  private async getL2(side: Side): Promise<L2Entry[]> {
     const baseToken = this.baseToken ?? (await this.loadBaseToken());
     const quoteToken = this.quoteToken ?? (await this.loadQuoteToken());
+    const isBid = side === "bid";
     const offerKeys = isBid ? this.bidOffers : this.askOffers;
     const baseTokenDiv = 10 ** baseToken.decimals;
     const quoteTokenDiv = 10 ** quoteToken.decimals;
