@@ -138,7 +138,7 @@ impl<'a, 'me> HoldingAccount<'a, 'me> {
             &[],
         )?;
         solana_program::msg!(
-            "CLOSE HOLDING BEFORE. token_account: {}, holding: {}",
+            "CLOSE HOLDING BEFORE. holding: {}, refund_rent_to: {}",
             self.account_info.lamports(),
             refund_rent_to.lamports()
         );
@@ -152,7 +152,7 @@ impl<'a, 'me> HoldingAccount<'a, 'me> {
             &[offer_pda_seeds!(offer.data)],
         )?;
         solana_program::msg!(
-            "CLOSE HOLDING AFTER. token_account: {}, holding: {}",
+            "CLOSE HOLDING AFTER. holding: {}, refund_rent_to: {}",
             self.account_info.lamports(),
             refund_rent_to.lamports()
         );
