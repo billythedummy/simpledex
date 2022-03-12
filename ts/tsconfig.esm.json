@@ -39,5 +39,8 @@
     }
   },
   "include": ["src/**/*.ts"],
-  "exclude": ["node_modules", "tests/**/*.ts"]
+  "exclude": ["node_modules", "tests/**/*.ts", "dist"],
+  "tsc-alias": {
+    "resolveFullPaths": true
+  }
 }

@@ -101,11 +101,15 @@ export class Market {
       quoteTokenAddr,
       programId,
     );
-    await market.loadBaseToken();
-    await market.loadQuoteToken();
-    await market.loadAllOffers();
-    market.startLiveUpdates();
+    await market.loadAll();
     return market;
+  }
+
+  public async loadAll(): Promise<void> {
+    await this.loadBaseToken();
+    await this.loadQuoteToken();
+    await this.loadAllOffers();
+    this.startLiveUpdates();
   }
 
   public async loadBaseToken(): Promise<Mint> {
@@ -350,6 +354,10 @@ export class Market {
     this.registerCancelOfferCallback();
     this.registerMatchOffersCallback();
     this.registerAllEventsListener();
+  }
+
+  public isListening(): boolean {
+    return this.eventListener !== null;
   }
 
   public getAllOffersByOwner(owner: PublicKey): Offer[] {

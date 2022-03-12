@@ -1,0 +1,31 @@
+.flex {
+  display: flex;
+}
+
+.space-between {
+  justify-content: space-between;
+}
+
+.flex-grow {
+  flex-grow: 1;
+}
+
+.flex-wrap {
+  flex-wrap: wrap;
+}
+
+.padding-20 {
+  padding: 20px;
+}
+
+.min-width-half {
+  min-width: 50%;
+}
+
+.full-width {
+  width: 100%;
+}
+
+.text-lg {
+  font-size: large;
+}
