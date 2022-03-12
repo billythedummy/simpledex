@@ -2,7 +2,7 @@
 
 use solana_program::pubkey::{Pubkey, PubkeyError};
 
-use crate::{error::SimpleDexError, state::Offer};
+use crate::state::Offer;
 
 macro_rules! pda_seed {
     (@pubkey $pubkey_seed: expr) => {
@@ -50,12 +50,12 @@ pub fn try_find_offer_pda(
     offer_mint: &Pubkey,
     accept_mint: &Pubkey,
     seed: u16,
-) -> Result<(Pubkey, u8), SimpleDexError> {
+) -> Result<(Pubkey, u8), PubkeyError> {
     Pubkey::try_find_program_address(
         offer_pda_seeds!(owner, offer_mint, accept_mint, seed),
         &crate::id(),
     )
-    .ok_or(SimpleDexError::InternalError)
+    .ok_or(PubkeyError::InvalidSeeds)
 }
 
 pub fn try_create_offer_pda(offer: &Offer) -> Result<Pubkey, PubkeyError> {

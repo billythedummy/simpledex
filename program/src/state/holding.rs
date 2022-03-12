@@ -79,7 +79,7 @@ impl<'a, 'me> HoldingAccount<'a, 'me> {
         let amt = offer
             .offering
             .checked_add(calc_fee(offer.offering)?)
-            .ok_or(SimpleDexError::InternalError)?;
+            .ok_or(SimpleDexError::NumericalError)?;
         let ix = transfer(
             &spl_token::id(),
             pay_from.key,

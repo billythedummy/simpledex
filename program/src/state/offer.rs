@@ -91,7 +91,7 @@ impl Offer {
         let new_offering = self
             .offering
             .checked_sub(amount_given)
-            .ok_or(SimpleDexError::InternalError)?;
+            .ok_or(SimpleDexError::NumericalError)?;
         // round towards higher price
         let new_accept_at_least = accept_over_offer.apply_ceil(new_offering)?;
         self.offering = new_offering;
@@ -165,7 +165,7 @@ impl<'a, 'me> OfferAccount<'a, 'me> {
         let refund_rent_to_starting_lamports = refund_rent_to.lamports();
         **refund_rent_to.lamports.borrow_mut() = refund_rent_to_starting_lamports
             .checked_add(self.account_info.lamports())
-            .ok_or(SimpleDexError::InternalError)?;
+            .ok_or(SimpleDexError::NumericalError)?;
 
         **self.account_info.lamports.borrow_mut() = 0;
         Ok(())

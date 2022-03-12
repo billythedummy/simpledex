@@ -141,10 +141,10 @@ impl Receipt {
 
         a_to_matcher = a_to_matcher
             .checked_add(bonus_a)
-            .ok_or(SimpleDexError::InternalError)?;
+            .ok_or(SimpleDexError::NumericalError)?;
         b_to_matcher = b_to_matcher
             .checked_add(bonus_b)
-            .ok_or(SimpleDexError::InternalError)?;
+            .ok_or(SimpleDexError::NumericalError)?;
 
         Ok(Self {
             a_to_b,

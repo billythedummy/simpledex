@@ -6,11 +6,11 @@ use spl_math::precise_number::PreciseNumber;
 use crate::error::SimpleDexError;
 
 fn try_into_precise_number(n: u64) -> Result<PreciseNumber, SimpleDexError> {
-    PreciseNumber::new(n as u128).ok_or(SimpleDexError::InternalError)
+    PreciseNumber::new(n as u128).ok_or(SimpleDexError::NumericalError)
 }
 
 fn try_from_precise_number(p: PreciseNumber) -> Result<u64, SimpleDexError> {
-    let expanded = p.to_imprecise().ok_or(SimpleDexError::InternalError)?;
+    let expanded = p.to_imprecise().ok_or(SimpleDexError::NumericalError)?;
     Ok(expanded.try_into()?)
 }
 
@@ -22,7 +22,7 @@ pub struct Ratio {
 impl Ratio {
     pub fn new(num: u64, denom: u64) -> Result<Self, SimpleDexError> {
         if denom == 0 {
-            return Err(SimpleDexError::InternalError);
+            return Err(SimpleDexError::NumericalError);
         }
         Ok(Self::new_unchecked(num, denom))
     }
@@ -39,7 +39,7 @@ impl Ratio {
         let res = self
             .apply(token_amt)?
             .ceiling()
-            .ok_or(SimpleDexError::InternalError)?;
+            .ok_or(SimpleDexError::NumericalError)?;
         try_from_precise_number(res)
     }
 
@@ -50,7 +50,7 @@ impl Ratio {
         num_precise
             .checked_mul(&token_amt_precise)
             .and_then(|u| u.checked_div(&denom_precise))
-            .ok_or(SimpleDexError::InternalError)
+            .ok_or(SimpleDexError::NumericalError)
     }
 }
 

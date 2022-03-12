@@ -14,7 +14,7 @@ use thiserror::Error;
 #[error("")] // no point deriving display individually if we cant use it due to high cost. Use PrintProgramError instead.
 pub enum SimpleDexError {
     // 0
-    InternalError,
+    NumericalError,
     PackunError,
     InvalidHoldingAccount,
     IncorrectMint,
@@ -52,7 +52,7 @@ impl PrintProgramError for SimpleDexError {
             + num_traits::FromPrimitive,
     {
         match self {
-            Self::InternalError => msg!("unknown"),
+            Self::NumericalError => msg!("numerical error"),
             Self::PackunError => msg!("(de)serialization error"),
             Self::InvalidHoldingAccount => msg!("provided account is not a valid holding account"),
             Self::IncorrectMint => msg!("given mint does not match token account's"),
@@ -72,6 +72,6 @@ impl PrintProgramError for SimpleDexError {
 
 impl From<TryFromIntError> for SimpleDexError {
     fn from(_e: TryFromIntError) -> Self {
-        Self::InternalError
+        Self::NumericalError
     }
 }
