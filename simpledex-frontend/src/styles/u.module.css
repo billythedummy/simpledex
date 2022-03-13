@@ -57,12 +57,20 @@
   border-color: green;
 }
 
+.green-bg {
+  background-color: green;
+}
+
 .red-text {
   color: red;
 }
 
 .red-border {
   border-color: red;
+}
+
+.red-bg {
+  background-color: red;
 }
 
 .width-200 {
@@ -79,4 +87,60 @@
 
 .text-center {
   text-align: center;
+}
+
+.overflow-y-scroll {
+  overflow-y: scroll;
+}
+
+.max-height-400 {
+  max-height: 400px;
+}
+
+.round-border {
+  border-radius: 3px;
+}
+
+.width-80-pct {
+  width: 80%;
+}
+
+.text-right {
+  text-align: right;
+}
+
+.pos-abs {
+  position: absolute;
+}
+
+.top-zero {
+  top: 0;
+}
+
+.right-zero {
+  right: 0;
+}
+
+.translucent {
+  opacity: 0.5;
+}
+
+.z-1 {
+  z-index: 1;
+}
+
+.z-2 {
+  z-index: 2;
+}
+
+.z-3 {
+  z-index: 3;
+}
+
+.height-100-pct {
+  height: 100%;
+}
+
+.pos-rel {
+  position: relative;
 }

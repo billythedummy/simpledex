@@ -156,7 +156,7 @@ export class Market {
       this.quoteTokenAddr,
     );
     // sort is in-place but its fine here
-    this.bidOffers = allAsks
+    this.askOffers = allAsks
       .sort(sortLowestAskFirst)
       .map((o) => o.address.toString());
     this.upsertOffers(allAsks);
@@ -262,6 +262,10 @@ export class Market {
     return Promise.all(allOffersPromises);
   }
 
+  public getIsOfMarketPredicate(): (o: OfferFields) => boolean {
+    return this.isOfMarketPredicate.bind(this);
+  }
+
   private isOfMarketPredicate(o: OfferFields): boolean {
     return (
       (o.acceptMint.equals(this.quoteTokenAddr) &&
@@ -272,9 +276,7 @@ export class Market {
   }
 
   private createOfferFilter(): EventFilterASTNode<SimpleDexEvent, CreateOffer> {
-    return SDF.narrowType(isCreateOffer).filter(
-      this.isOfMarketPredicate.bind(this),
-    );
+    return SDF.narrowType(isCreateOffer).filter(this.getIsOfMarketPredicate());
   }
 
   private registerCreateOfferCallback() {
@@ -295,9 +297,7 @@ export class Market {
   }
 
   private cancelOfferFilter(): EventFilterASTNode<SimpleDexEvent, CancelOffer> {
-    return SDF.narrowType(isCancelOffer).filter(
-      this.isOfMarketPredicate.bind(this),
-    );
+    return SDF.narrowType(isCancelOffer).filter(this.getIsOfMarketPredicate());
   }
 
   private registerCancelOfferCallback() {

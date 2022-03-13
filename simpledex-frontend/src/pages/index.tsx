@@ -9,6 +9,7 @@ import { NewOrder } from "@/components/NewOrder";
 import { useSolana } from "@/contexts/SolanaContext";
 import { pubkeyAbbr } from "@/utils";
 import { OpenOrders } from "@/components/OpenOrders";
+import { OrderBook } from "@/components/Orderbook";
 
 const Home: NextPage = () => {
   const router = useRouter();
@@ -61,7 +62,15 @@ const HomeContent: VFC = () => {
           <h4>Open Orders</h4>
           <OpenOrders />
         </div>
-        <div className={`${u["flex-grow"]} ${u["padding-20"]}`}>Orderbook</div>
+        <div className={`${u["flex-grow"]} ${u["padding-20"]}`}>
+          <button
+            className={`${u["full-width"]} ${u["padding-20"]} ${u["text-lg"]}`}
+          >
+            Match
+          </button>
+          <h4>Orderbook</h4>
+          <OrderBook />
+        </div>
       </div>
     </>
   );
