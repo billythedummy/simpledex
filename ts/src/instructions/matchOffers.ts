@@ -30,7 +30,7 @@ export function matchOffersInstruction(
   ];
 
   const data = Buffer.alloc(1);
-  u8().encode(SimpleDexInstruction.CancelOffer, data);
+  u8().encode(SimpleDexInstruction.MatchOffers, data);
 
   return new TransactionInstruction({ keys, programId, data });
 }

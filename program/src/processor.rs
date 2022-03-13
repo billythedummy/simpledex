@@ -23,6 +23,7 @@ impl Processor {
         }
         let mut reader = input;
         let instruction = SimpleDexInstruction::read_bytes(&mut reader)?;
+        instruction.log_invocation();
         match instruction {
             SimpleDexInstruction::CreateOffer(args) => process_create_offer(accounts, args),
             SimpleDexInstruction::CancelOffer => process_cancel(accounts),

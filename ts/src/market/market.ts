@@ -169,6 +169,7 @@ export class Market {
   }
 
   /**
+   * Updates the offer values in this.offers with the new values.
    * Loads offer from on-chain if offer missing from this.offers
    * @param offerFieldsItems
    */
@@ -189,7 +190,14 @@ export class Market {
       );
     });
     const updatedOffers = await Promise.all(promises);
-    this.upsertOffers(updatedOffers);
+    updatedOffers.forEach((offer) => {
+      if (offer.isClosed()) {
+        this.deleteFromSortedL2(offer);
+        this.deleteOffers([offer.address.toString()]);
+      } else {
+        this.upsertOffers([offer]);
+      }
+    });
   }
 
   private deleteOffers(offerAddrs: string[]): void {
@@ -496,7 +504,9 @@ export class Market {
       : [offer.offering, offer.acceptAtLeast];
     const nQuoteDecimals = new Decimal(nQuoteTokens.toString());
     const nBaseDecimals = new Decimal(nBaseTokens.toString());
-    const priceVal = nQuoteDecimals.mul(baseTokenDiv).div(nBaseDecimals);
+    const priceVal = nBaseDecimals.isZero()
+      ? new Decimal(0)
+      : nQuoteDecimals.mul(baseTokenDiv).div(nBaseDecimals);
     const priceDecimals = priceVal.div(quoteTokenDiv);
     const size = nBaseTokens;
     const sizeDecimals = nBaseDecimals.div(baseTokenDiv);
@@ -542,9 +552,12 @@ export class Market {
       if (res.length === 0 || res[i].price !== priceAndSize.price) {
         res.push(priceAndSize);
         i++;
+      } else {
+        res[i].size += priceAndSize.size;
+        res[i].sizeDecimals = res[i].sizeDecimals.add(
+          priceAndSize.sizeDecimals,
+        );
       }
-      res[i].size += priceAndSize.size;
-      res[i].sizeDecimals = res[i].sizeDecimals.add(priceAndSize.sizeDecimals);
     });
     return res;
   }

@@ -36,11 +36,11 @@ export const OrderbookRow: VFC<OrderBookRowProps> = ({
         </div>
         <div
           className={`${u["pos-abs"]} ${u["translucent"]} ${u["height-100-pct"]} ${u["top-zero"]} ${u["right-zero"]} ${u["green-bg"]} ${u["z-2"]}`}
-          style={{ width: `${(bidSize / maxSize) * 100}%` }}
+          style={{ width: `${maxSize ? (bidSize / maxSize) * 100 : 0}%` }}
         />
         <div
           className={`${u["pos-abs"]} ${u["translucent"]} ${u["height-100-pct"]} ${u["top-zero"]} ${u["right-zero"]} ${u["red-bg"]} ${u["z-1"]}`}
-          style={{ width: `${(askSize / maxSize) * 100}%` }}
+          style={{ width: `${maxSize ? (askSize / maxSize) * 100 : 0}%` }}
         />
       </div>
     </div>

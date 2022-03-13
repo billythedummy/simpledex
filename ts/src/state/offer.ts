@@ -1,5 +1,5 @@
 import { struct, u8, u16 } from "@solana/buffer-layout";
-import { publicKey, u64 } from "@solana/buffer-layout-utils";
+import { bigInt, publicKey, u64 } from "@solana/buffer-layout-utils";
 import { getAssociatedTokenAddress } from "@solana/spl-token";
 import {
   Commitment,
@@ -161,5 +161,10 @@ export class Offer implements RawOffer {
       matcherAcceptTokenAccount,
       programId,
     );
+  }
+
+  isClosed(): boolean {
+    const zero = BigInt(0);
+    return this.offering === zero || this.acceptAtLeast === zero;
   }
 }

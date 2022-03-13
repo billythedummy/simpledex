@@ -8,6 +8,7 @@ mod packun;
 pub use cancel_offer::cancel_offer;
 pub use create_offer::create_offer;
 pub use match_offers::match_offers;
+use solana_program::msg;
 
 #[repr(C)]
 #[derive(Clone, Debug, PartialEq)]
@@ -22,4 +23,12 @@ impl SimpleDexInstruction {
     pub const PACKED_LEN_CREATE_OFFER: usize = 20; // 1 + 19
     pub const PACKED_LEN_CANCEL_OFFER: usize = 1;
     pub const PACKED_LEN_MATCH_OFFERS: usize = 1;
+
+    pub fn log_invocation(&self) {
+        match self {
+            Self::CreateOffer(_) => msg!("CreateOffer"),
+            Self::CancelOffer => msg!("CancelOffer"),
+            Self::MatchOffers => msg!("MatchOffers"),
+        }
+    }
 }

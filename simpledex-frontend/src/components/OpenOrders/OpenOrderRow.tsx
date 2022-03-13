@@ -54,7 +54,7 @@ export const OpenOrderRow: VFC<OpenOrderRowProps> = ({ offerKey }) => {
     () => market.offers.get(offerKey.toString()),
     [market, crank]
   );
-  if (!offer) return null;
+  if (!offer || offer.isClosed()) return null;
 
   const cancelOrder = async () => {
     const walletPubkey = wallet.publicKey;

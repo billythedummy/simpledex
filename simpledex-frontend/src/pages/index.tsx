@@ -3,6 +3,7 @@ import type { NextPage } from "next";
 import { useRouter } from "next/router";
 import u from "@/styles/u.module.css";
 import { WalletButton } from "@/components/WalletButton";
+import { MatchButton } from "@/components/MatchButton";
 import { VFC } from "react";
 import { MarketProvider, useMarket } from "@/contexts/MarketContext";
 import { NewOrder } from "@/components/NewOrder";
@@ -63,11 +64,9 @@ const HomeContent: VFC = () => {
           <OpenOrders />
         </div>
         <div className={`${u["flex-grow"]} ${u["padding-20"]}`}>
-          <button
+          <MatchButton
             className={`${u["full-width"]} ${u["padding-20"]} ${u["text-lg"]}`}
-          >
-            Match
-          </button>
+          />
           <h4>Orderbook</h4>
           <OrderBook />
         </div>
