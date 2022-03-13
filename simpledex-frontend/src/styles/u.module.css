@@ -2,8 +2,16 @@
   display: flex;
 }
 
+.flex-col {
+  flex-direction: column;
+}
+
 .space-between {
   justify-content: space-between;
+}
+
+.align-center {
+  align-items: center;
 }
 
 .flex-grow {
@@ -28,4 +36,47 @@
 
 .text-lg {
   font-size: large;
+}
+
+.grey-bg {
+  background-color: rgb(44, 47, 51);
+}
+
+.children-vert-margin > *:not(:first-child) {
+  margin-top: 10px;
+}
+
+.children-hor-margin > *:not(:first-child) {
+  margin-left: 10px;
+}
+.green-text {
+  color: green;
+}
+
+.green-border {
+  border-color: green;
+}
+
+.red-text {
+  color: red;
+}
+
+.red-border {
+  border-color: red;
+}
+
+.width-200 {
+  width: 200px;
+}
+
+.background-contrast {
+  background-color: black;
+}
+
+.no-border {
+  border: none;
+}
+
+.text-center {
+  text-align: center;
 }

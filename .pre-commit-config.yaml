@@ -8,6 +8,7 @@ repos:
   # idk wtf but adding next frontend broke eslint pre-commit
   # Error: ESLint configuration in .eslintrc.json » ./ts is invalid:
   # - Unexpected top-level property "PROGRAM_ID".
+  #
   # - repo: https://github.com/pre-commit/mirrors-eslint
   #   rev: v8.9.0
   #   hooks:

@@ -7,6 +7,7 @@ import {
 import {
   PublicKey,
   SystemProgram,
+  SYSVAR_RENT_PUBKEY,
   TransactionInstruction,
 } from "@solana/web3.js";
 
@@ -30,12 +31,10 @@ export type CreateOfferInstructionData = {
 export const CREATE_OFFER_INSTRUCTION_DATA = struct<CreateOfferInstructionData>(
   [
     u8("instruction"),
-    struct<CreateOfferArgs>([
-      u8("bump"),
-      u16("seed"),
-      u64("offering"),
-      u64("acceptAtLeast"),
-    ]),
+    struct<CreateOfferArgs>(
+      [u8("bump"), u16("seed"), u64("offering"), u64("acceptAtLeast")],
+      "args",
+    ),
   ],
 );
 
@@ -76,6 +75,8 @@ export async function createOfferInstruction(
     { pubkey: TOKEN_PROGRAM_ID, isSigner: false, isWritable: false },
     { pubkey: ASSOCIATED_TOKEN_PROGRAM_ID, isSigner: false, isWritable: false },
     { pubkey: SystemProgram.programId, isSigner: false, isWritable: false },
+    // TODO: remove once ata 1.0.5 drops
+    { pubkey: SYSVAR_RENT_PUBKEY, isSigner: false, isWritable: false },
   ];
 
   const data = Buffer.alloc(CREATE_OFFER_INSTRUCTION_DATA.span);

@@ -28,6 +28,8 @@ pub enum SimpleDexError {
     // 10
     IncorrectCreditTo,
     OffersDontMatch,
+    InvalidOfferAccount,
+    InvalidOfferBump,
 }
 
 impl From<SimpleDexError> for ProgramError {
@@ -66,6 +68,8 @@ impl PrintProgramError for SimpleDexError {
             Self::IncorredRefundRentTo => msg!("incorrect refund_rent_to for this offer"),
             Self::IncorrectCreditTo => msg!("incorrect credit_to for this offer"),
             Self::OffersDontMatch => msg!("offers do not meet each other's limit price"),
+            Self::InvalidOfferAccount => msg!("provided account is not a valid offer account"),
+            Self::InvalidOfferBump => msg!("provided bump seed for offer account is not correct"),
         }
     }
 }

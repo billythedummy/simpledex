@@ -16,3 +16,25 @@ a {
 * {
   box-sizing: border-box;
 }
+
+button {
+  background: transparent;
+  color: white;
+  border-radius: 3px;
+  border-width: 2px;
+  border-style: solid;
+  padding: 20px;
+}
+
+button:enabled {
+  cursor: pointer;
+}
+
+input {
+  background: transparent;
+  color: white;
+  border-radius: 3px;
+  border-width: 2px;
+  border-style: solid;
+  font-size: x-large;
+}

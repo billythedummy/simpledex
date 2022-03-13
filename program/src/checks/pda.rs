@@ -14,9 +14,9 @@ pub fn is_offer_pda(
 ) -> Result<(), ProgramError> {
     let (found_pubkey, found_bump) =
         try_find_offer_pda(owner.key, offer_mint.key, accept_mint.key, seed)?;
-    is_pubkey_matching(actual, &found_pubkey, SimpleDexError::InvalidHoldingAccount)?;
+    is_pubkey_matching(actual, &found_pubkey, SimpleDexError::InvalidOfferAccount)?;
     match bump == found_bump {
         true => Ok(()),
-        false => Err(SimpleDexError::InvalidHoldingAccount.into()),
+        false => Err(SimpleDexError::InvalidOfferBump.into()),
     }
 }
