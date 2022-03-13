@@ -9,6 +9,7 @@ use solana_program::{
     entrypoint::ProgramResult,
     program::{invoke, invoke_signed},
     program_error::ProgramError,
+    program_memory::sol_memset,
     program_pack::{IsInitialized, Pack, Sealed},
     pubkey::Pubkey,
     rent::Rent,
@@ -161,13 +162,18 @@ impl<'a, 'me> OfferAccount<'a, 'me> {
     }
 
     pub fn close(self, refund_rent_to: &AccountInfo<'a>) -> Result<(), ProgramError> {
-        self.account_info.realloc(0, true)?;
         let refund_rent_to_starting_lamports = refund_rent_to.lamports();
         **refund_rent_to.lamports.borrow_mut() = refund_rent_to_starting_lamports
             .checked_add(self.account_info.lamports())
             .ok_or(SimpleDexError::NumericalError)?;
 
         **self.account_info.lamports.borrow_mut() = 0;
+        // looks like 1.9.X still isnt ready for primetime yet
+        // reallocing results in "program other than the account's owner changed the size of the account data" error
+        //self.account_info.realloc(0, true)?;
+        let mut data = self.account_info.data.borrow_mut();
+        let data_len = data.len();
+        sol_memset(*data, 0, data_len);
         Ok(())
     }
 

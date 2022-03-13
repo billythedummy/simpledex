@@ -38,3 +38,11 @@ input {
   border-style: solid;
   font-size: x-large;
 }
+
+th {
+  text-align: left;
+}
+
+p {
+  margin: 0;
+}

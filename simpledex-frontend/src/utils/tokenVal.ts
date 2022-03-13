@@ -20,7 +20,11 @@ export function parseTokenVal(val: string, decimals: number): bigint | null {
       case 1:
         return BigInt(val) * decMultiplier;
       case 2:
-        return BigInt(split[0]) * decMultiplier + BigInt(split[1]);
+        if (split[1].length > decimals) return null;
+        return (
+          BigInt(split[0]) * decMultiplier +
+          BigInt(split[1].padEnd(decimals, "0"))
+        );
       default:
         throw new Error("invalid token val");
     }

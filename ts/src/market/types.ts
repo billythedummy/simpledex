@@ -34,3 +34,8 @@ export type MarketCreateOfferOptions = {
   creditTo?: PublicKey;
   refundRentTo?: PublicKey;
 };
+
+export type MarketOfferInfo = {
+  side: Side;
+  priceAndSize: L2Entry;
+};

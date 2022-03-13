@@ -8,6 +8,7 @@ import { MarketProvider, useMarket } from "@/contexts/MarketContext";
 import { NewOrder } from "@/components/NewOrder";
 import { useSolana } from "@/contexts/SolanaContext";
 import { pubkeyAbbr } from "@/utils";
+import { OpenOrders } from "@/components/OpenOrders";
 
 const Home: NextPage = () => {
   const router = useRouter();
@@ -55,8 +56,10 @@ const HomeContent: VFC = () => {
           <WalletButton
             className={`${u["full-width"]} ${u["padding-20"]} ${u["text-lg"]}`}
           />
-          <NewOrder market={market} />
-          <div>Open orders</div>
+          <h4>New Order</h4>
+          <NewOrder />
+          <h4>Open Orders</h4>
+          <OpenOrders />
         </div>
         <div className={`${u["flex-grow"]} ${u["padding-20"]}`}>Orderbook</div>
       </div>

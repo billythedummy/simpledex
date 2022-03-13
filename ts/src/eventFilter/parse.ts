@@ -90,7 +90,7 @@ function parseCancelOffer(body: string): CancelOffer {
   };
 }
 
-const PROGRAM_LOG_PREFIX = "Program Log: ";
+const PROGRAM_LOG_PREFIX = "Program log: ";
 
 /**
  *

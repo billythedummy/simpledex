@@ -17,7 +17,12 @@ import {
 import { parseLog } from "@/eventFilter/parse";
 import { createOfferInstruction as _createOfferInstruction } from "@/instructions";
 import { AllOfferSeedsUsedError, MarketOutOfSyncError } from "@/market/err";
-import { L2Entry, MarketCreateOfferOptions, Side } from "@/market/types";
+import {
+  L2Entry,
+  MarketCreateOfferOptions,
+  MarketOfferInfo,
+  Side,
+} from "@/market/types";
 import { Offer, OFFER_LAYOUT } from "@/state";
 
 function sortHighestBidFirst(a: OfferFields, b: OfferFields): number {
@@ -267,7 +272,9 @@ export class Market {
   }
 
   private createOfferFilter(): EventFilterASTNode<SimpleDexEvent, CreateOffer> {
-    return SDF.narrowType(isCreateOffer).filter(this.isOfMarketPredicate);
+    return SDF.narrowType(isCreateOffer).filter(
+      this.isOfMarketPredicate.bind(this),
+    );
   }
 
   private registerCreateOfferCallback() {
@@ -288,7 +295,9 @@ export class Market {
   }
 
   private cancelOfferFilter(): EventFilterASTNode<SimpleDexEvent, CancelOffer> {
-    return SDF.narrowType(isCancelOffer).filter(this.isOfMarketPredicate);
+    return SDF.narrowType(isCancelOffer).filter(
+      this.isOfMarketPredicate.bind(this),
+    );
   }
 
   private registerCancelOfferCallback() {
@@ -439,6 +448,67 @@ export class Market {
     );
   }
 
+  public determineOfferSide(offer: OfferFields): Side | null {
+    if (
+      offer.acceptMint.equals(this.baseTokenAddr) &&
+      offer.offerMint.equals(this.quoteTokenAddr)
+    ) {
+      return "bid";
+    }
+    if (
+      offer.acceptMint.equals(this.quoteTokenAddr) &&
+      offer.offerMint.equals(this.baseTokenAddr)
+    ) {
+      return "ask";
+    }
+    return null;
+  }
+
+  /**
+   *
+   * @param offer
+   * @returns null if baseToken or quoteToken info has not been fetched yet,
+   *          or if offer is not of this market
+   */
+  public offerMarketInfo(offer: OfferFields): MarketOfferInfo | null {
+    const side = this.determineOfferSide(offer);
+    if (!side || !this.baseToken || !this.quoteToken) return null;
+    const priceAndSize = Market.offerToPriceAndSizeUnchecked(
+      offer,
+      side,
+      this.baseToken,
+      this.quoteToken,
+    );
+    return { side, priceAndSize };
+  }
+
+  private static offerToPriceAndSizeUnchecked(
+    offer: OfferFields,
+    side: Side,
+    baseToken: Mint,
+    quoteToken: Mint,
+  ): L2Entry {
+    const baseTokenDiv = 10 ** baseToken.decimals;
+    const quoteTokenDiv = 10 ** quoteToken.decimals;
+    const isBid = side === "bid";
+    const [nBaseTokens, nQuoteTokens] = isBid
+      ? [offer.acceptAtLeast, offer.offering]
+      : [offer.offering, offer.acceptAtLeast];
+    const nQuoteDecimals = new Decimal(nQuoteTokens.toString());
+    const nBaseDecimals = new Decimal(nBaseTokens.toString());
+    const priceVal = nQuoteDecimals.mul(baseTokenDiv).div(nBaseDecimals);
+    const priceDecimals = priceVal.div(quoteTokenDiv);
+    const size = nBaseTokens;
+    const sizeDecimals = nBaseDecimals.div(baseTokenDiv);
+    const price = BigInt(priceVal.round().toString());
+    return {
+      priceDecimals,
+      size,
+      sizeDecimals,
+      price,
+    };
+  }
+
   public getL2Bids(): Promise<L2Entry[]> {
     return this.getL2("bid");
   }
@@ -458,34 +528,23 @@ export class Market {
     const quoteToken = this.quoteToken ?? (await this.loadQuoteToken());
     const isBid = side === "bid";
     const offerKeys = isBid ? this.bidOffers : this.askOffers;
-    const baseTokenDiv = 10 ** baseToken.decimals;
-    const quoteTokenDiv = 10 ** quoteToken.decimals;
     const res: L2Entry[] = [];
     offerKeys.forEach((offerKey) => {
       const offer = this.offers.get(offerKey);
       if (!offer) throw new MarketOutOfSyncError();
-      const [nBaseTokens, nQuoteTokens] = isBid
-        ? [offer.acceptAtLeast, offer.offering]
-        : [offer.offering, offer.acceptAtLeast];
-      const nQuoteDecimals = new Decimal(nQuoteTokens.toString());
-      const nBaseDecimals = new Decimal(nBaseTokens.toString());
-      const priceVal = nQuoteDecimals.mul(baseTokenDiv).div(nBaseDecimals);
-      const priceDecimals = priceVal.div(quoteTokenDiv);
-      const size = nBaseTokens;
-      const sizeDecimals = nBaseDecimals.div(baseTokenDiv);
-      const price = BigInt(priceVal.round().toString());
+      const priceAndSize = Market.offerToPriceAndSizeUnchecked(
+        offer,
+        side,
+        baseToken,
+        quoteToken,
+      );
       let i = res.length - 1;
-      if (res.length === 0 || res[i].price !== price) {
-        res.push({
-          priceDecimals,
-          sizeDecimals,
-          price,
-          size,
-        });
+      if (res.length === 0 || res[i].price !== priceAndSize.price) {
+        res.push(priceAndSize);
         i++;
       }
-      res[i].size += size;
-      res[i].sizeDecimals = res[i].sizeDecimals.add(sizeDecimals);
+      res[i].size += priceAndSize.size;
+      res[i].sizeDecimals = res[i].sizeDecimals.add(priceAndSize.sizeDecimals);
     });
     return res;
   }

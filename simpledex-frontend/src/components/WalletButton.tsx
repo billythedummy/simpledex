@@ -11,7 +11,7 @@ type WalletButtonProps = ButtonHTMLAttributes<HTMLButtonElement> & {
 };
 
 export function WalletButton({
-  text = "Connect",
+  text = "Connect Wallet",
   ...buttonStyles
 }: WalletButtonProps) {
   const { wallet } = useProvider();

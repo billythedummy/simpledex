@@ -145,7 +145,7 @@ fn log_success(
     // format str BPF instructions exec 65614. compute units 96931
     // with no logs at all, BPF instructions exec 29140. compute units 63314
     msg!(
-        "NEW:{},{},{},{},{}",
+        "CREATE:{},{},{},{},{}",
         created_offer.to_string(),
         offer_mint.to_string(),
         offering,

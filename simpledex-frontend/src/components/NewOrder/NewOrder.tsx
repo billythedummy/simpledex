@@ -1,19 +1,17 @@
 import { useState, VFC } from "react";
-import { Market, Side } from "simpledex";
+import { Side } from "simpledex";
 import u from "@/styles/u.module.css";
 import { TokenValueInputRow } from "./TokenValueInputRow";
 import { useProvider } from "@/hooks/useProvider";
-import { parseTokenVal, unshiftCreateATA } from "@/utils";
+import { parseTokenVal, sendSignConfirm, unshiftCreateATA } from "@/utils";
 import { Transaction } from "@solana/web3.js";
 import { useSolana } from "@/contexts/SolanaContext";
+import { useMarket } from "@/contexts/MarketContext";
 
-type NewOrderProps = {
-  market: Market;
-};
-
-export const NewOrder: VFC<NewOrderProps> = ({ market }) => {
+export const NewOrder: VFC = () => {
   const { cluster } = useSolana();
   const { wallet } = useProvider();
+  const { market } = useMarket();
 
   const [side, setSide] = useState<Side>("bid");
   const [baseValStr, setBaseValStr] = useState("");
@@ -63,21 +61,14 @@ export const NewOrder: VFC<NewOrderProps> = ({ market }) => {
       walletPubkey
     );
     setIsAwaitingTx(true);
-    try {
-      const { blockhash } = await market.connection.getLatestBlockhash();
-      tx.recentBlockhash = blockhash;
-      tx.feePayer = walletPubkey;
-      const signedTx = await wallet.signTransaction(tx);
-      const rawTx = signedTx.serialize();
-      const sig = await market.connection.sendRawTransaction(rawTx);
-      await market.connection.confirmTransaction(sig, "confirmed");
-      alert(
-        `Limit order created. View on explorer: https://explorer.solana.com/tx/${sig}?cluster=${cluster.network}`
-      );
-    } catch (e) {
-      console.log(e);
-      alert(JSON.stringify(e));
-    }
+    await sendSignConfirm(
+      cluster.network,
+      market.connection,
+      wallet,
+      tx,
+      undefined,
+      "Limit order created"
+    );
     setIsAwaitingTx(false);
   };
 
