@@ -1,12 +1,20 @@
-import { VFC } from "react";
+import { useEffect, VFC } from "react";
 import u from "@/styles/u.module.css";
 import { OrderbookRow, OrderBookRowProps } from "./OrderbookRow";
 import { useMarket } from "@/contexts/MarketContext";
 import { pubkeyAbbr } from "@/utils";
-import { Market } from "simpledex";
-import useSWR from "swr";
+import {
+  isCancelOffer,
+  isCreateOffer,
+  isMatchOffers,
+  Market,
+  SDF,
+} from "simpledex";
+import useSWR, { useSWRConfig } from "swr";
 
 const L2_DISPLAY_DEPTH = 8;
+
+const ORDERBOOK_SWR_KEY = "orderbook";
 
 async function genOrderbook(market: Market): Promise<OrderBookRowProps[]> {
   const asks = (await market.getL2Asks()).slice(0, L2_DISPLAY_DEPTH);
@@ -39,11 +47,24 @@ async function genOrderbook(market: Market): Promise<OrderBookRowProps[]> {
 }
 
 export const OrderBook: VFC = () => {
+  const { mutate } = useSWRConfig();
   const { market } = useMarket();
 
-  const { data = [] } = useSWR("orderbook", () => genOrderbook(market), {
-    refreshInterval: 5_000,
-  });
+  const { data = [] } = useSWR(ORDERBOOK_SWR_KEY, () => genOrderbook(market));
+
+  useEffect(() => {
+    const listener = market.onEvent((e) => {
+      const create = SDF.narrowType(isCreateOffer);
+      const cancel = SDF.narrowType(isCancelOffer);
+      const match = SDF.narrowType(isMatchOffers).map((e) => e.updatedOfferA);
+      const filter = create
+        .or(cancel)
+        .or(match)
+        .filter(market.getIsOfMarketPredicate());
+      if (filter.execute(e) !== null) mutate(ORDERBOOK_SWR_KEY);
+    });
+    return () => market.removeOnEventListener(listener);
+  }, [market]);
 
   return (
     <div className={`${u["flex"]} ${u["flex-col"]}`}>

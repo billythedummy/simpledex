@@ -16,7 +16,8 @@ import { SimpleDexEvent } from "@/eventFilter/eventTypes";
  *                      .filter(e => new Decimal(e.tokenBAmount).div(new Decimal(e.tokenAAmount)).gt(LIMIT_PRICE));
  * const filter = a.or(b);
  *
- * Create your own nodes that extend the `EventFilterASTNode` by overriding `executeOnData()` to define how to operate on non-null data
+ * Create your own nodes that extend the `EventFilterASTNode` by overriding `executeOnData()` to define how to operate on non-null data.
+ * You can then call-chain them using then(): `SDF.then(new MyAwesomeEventFilterASTNode())`
  */
 export abstract class EventFilterASTNode<I, O> {
   constructor(public readonly type: string) {}
@@ -32,11 +33,11 @@ export abstract class EventFilterASTNode<I, O> {
   narrowType<R extends O>(
     typeGuard: (data: O) => data is R,
   ): EventFilterASTNode<I, R> {
-    return new ThenNode(this, new NarrowTypeNode(typeGuard));
+    return this.then(new NarrowTypeNode(typeGuard));
   }
 
   filter(predicate: (data: O) => boolean): EventFilterASTNode<I, O> {
-    return new ThenNode(this, new FilterNode(predicate));
+    return this.then(new FilterNode(predicate));
   }
 
   or<R>(other: EventFilterASTNode<I, R>): EventFilterASTNode<I, O | R> {
@@ -44,7 +45,11 @@ export abstract class EventFilterASTNode<I, O> {
   }
 
   map<R>(transform: (data: O) => R): EventFilterASTNode<I, R> {
-    return new ThenNode(this, new MapNode(transform));
+    return this.then(new MapNode(transform));
+  }
+
+  then<R>(second: EventFilterASTNode<O, R>): EventFilterASTNode<I, R> {
+    return new ThenNode(this, second);
   }
 
   // TODO: optimize tree

@@ -1,6 +1,6 @@
 import { useMarket } from "@/contexts/MarketContext";
 import { PublicKey, Transaction } from "@solana/web3.js";
-import { useEffect, useMemo, useState, VFC } from "react";
+import { useEffect, VFC } from "react";
 import {
   CancelOffer,
   EventFilterASTNode,
@@ -15,6 +15,7 @@ import u from "@/styles/u.module.css";
 import { sendSignConfirm, unshiftCreateATA } from "@/utils";
 import { useProvider } from "@/hooks/useProvider";
 import { useSolana } from "@/contexts/SolanaContext";
+import useSWR, { useSWRConfig } from "swr";
 
 type OpenOrderRowProps = {
   offerKey: PublicKey;
@@ -35,25 +36,25 @@ function offerChangedFilter(
 }
 
 export const OpenOrderRow: VFC<OpenOrderRowProps> = ({ offerKey }) => {
+  const offerKeyStr = offerKey.toString();
+  const swrKey = ["offer-key", offerKeyStr];
+  const { mutate } = useSWRConfig();
   const { cluster } = useSolana();
   const { wallet } = useProvider();
   const { market } = useMarket();
 
-  const [crank, setCrank] = useState(true);
-  const refetchOffer = () => setCrank(!crank);
+  const { data: offer } = useSWR(swrKey, (_key, offerKeyStrArg) =>
+    market.offers.get(offerKeyStrArg)
+  );
 
   useEffect(() => {
     const listener = market.onEvent((e) => {
       const filter = offerChangedFilter(offerKey);
-      if (filter.execute(e) !== null) refetchOffer();
+      if (filter.execute(e) !== null) mutate(swrKey);
     });
     return () => market.removeOnEventListener(listener);
   }, [market]);
 
-  const offer = useMemo(
-    () => market.offers.get(offerKey.toString()),
-    [market, crank]
-  );
   if (!offer || offer.isClosed()) return null;
 
   const cancelOrder = async () => {
